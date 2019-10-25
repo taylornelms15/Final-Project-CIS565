@@ -51,9 +51,7 @@ This is the platform I plan to use to develop on the Jetson platform
   * Potential structure by which to take in video feed input; can do direct camera feed or video file input
   * Possibility of just making use of the very front end of one of their sample pipelines, then implementing our own after that point
 
-##### Installation Instructions
-
-This can be downloaded and installed through the [NVIDIA SDK Manager](#NVIDIA-SDK-Manager). In your initial download/setup of
+I recommend installing this through the [NVIDIA SDK Manager](#NVIDIA-SDK-Manager); the steps in that section should detail how to get it up and running.
 
 ### References
 
