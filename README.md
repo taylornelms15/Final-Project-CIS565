@@ -12,13 +12,13 @@ This is the platform I plan to use to develop on the Jetson platform
 
 1. (Windows) Set up Ubuntu Subsystem
 
-  It only runs on Linux, so if you're on Windows, I recommend downloading Ubuntu from the Microsoft Store.
+    It only runs on Linux, so if you're on Windows, I recommend downloading Ubuntu from the Microsoft Store.
 
-  There is a lovely guide for how to set up the relevane X server [here](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/). This is necessary on Windows; otherwise, there is no way for the Ubuntu subsystem to spin up a display on your computer.
+    There is a lovely guide for how to set up the relevane X server [here](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/). This is necessary on Windows; otherwise, there is no way for the Ubuntu subsystem to spin up a display on your computer.
 
 2. Install SDK Manager
 
-  Start up Ubuntu, and navigate to the `Downloads` folder.
+    Start up Ubuntu, and navigate to the `Downloads` folder.
 
   Then, execute:
 ```
@@ -30,11 +30,11 @@ sudo apt-get install libxss1
 sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
 ```
 
-  Then, with the X-server up and running, you can execute:
+    Then, with the X-server up and running, you can execute:
 ```
 sdkmanager
 ```
-  This will start up the NVIDIA SDK Manager
+    This will start up the NVIDIA SDK Manager
 
 #### Deepstream SDK
 
