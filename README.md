@@ -21,19 +21,19 @@ This is the platform I plan to use to develop on the Jetson platform
     Start up Ubuntu, and navigate to the `Downloads` folder.
 
     Then, execute:
-```
-sudo apt-get update
-sudo apt-get install libgtk-3-0
-sudo apt-get install libx11-xcb-dev
-sudo apt-get install libxss1
-sudo apt-get install libxss1
-sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
-```
+    ```
+    sudo apt-get update
+    sudo apt-get install libgtk-3-0
+    sudo apt-get install libx11-xcb-dev
+    sudo apt-get install libxss1
+    sudo apt-get install libxss1
+    sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
+    ```
 
     Then, with the X-server up and running, you can execute:
-```
-sdkmanager
-```
+    ```
+    sdkmanager
+    ```
     This will start up the NVIDIA SDK Manager
 
 #### Deepstream SDK
