@@ -45,6 +45,14 @@ This is the platform I plan to use to develop on the Jetson platform
 
     Note that this will take something like 20GB on your computer, so be aware before you start this process.
 
+4. (Windows) Flash Image to Board Separately
+    I haven't gotten the stuff together to make this work, but the next step (after install fails) may be to run the following commands:
+    ```
+    cd ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P3448/Linux_for_Tegra
+    sudo ./flash.sh -S 29318MiB jetson-nano-qspi mmcblk0p1
+    ```
+    This document is definitely a work in progress.
+
 #### Deepstream SDK
 
 * [DeepStream SDK](https://developer.nvidia.com/deepstream-sdk)
