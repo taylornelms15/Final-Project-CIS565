@@ -20,7 +20,7 @@ This is the platform I plan to use to develop on the Jetson platform
 
     Start up Ubuntu, and navigate to the `Downloads` folder.
 
-  Then, execute:
+    Then, execute:
 ```
 sudo apt-get update
 sudo apt-get install libgtk-3-0
