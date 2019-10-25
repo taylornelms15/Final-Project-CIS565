@@ -17,6 +17,7 @@ Start up Ubuntu, and navigate to the `Downloads` folder.
 Then, execute:
 ```
 sudo apt-get update
+sudo apt install libgtk-3-0
 sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
 ```
 
