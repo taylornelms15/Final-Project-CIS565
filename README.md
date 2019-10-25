@@ -44,7 +44,7 @@ sdkmanager
 
 ##### Installation Instructions
 
-This can be downloaded and installed through the [NVIDIA SDK Manager](#NVIDIA SDK Manager). In your initial download/setup of
+This can be downloaded and installed through the [NVIDIA SDK Manager](#NVIDIA-SDK-Manager). In your initial download/setup of
 
 ### References
 
