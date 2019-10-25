@@ -36,6 +36,15 @@ This is the platform I plan to use to develop on the Jetson platform
     ```
     This will start up the NVIDIA SDK Manager
 
+3. Install Drivers and Components
+
+    [This link](https://docs.nvidia.com/sdk-manager/install-with-sdkm-jetson/index.html) describes how to configure the SDK. The notable changes you'll want to make from the default are:
+
+    1. Choose the Jetson Nano hardware platform
+    2. Choose to install the Deepstream SDK option, just in case.
+
+    Note that this will take something like 20GB on your computer, so be aware before you start this process.
+
 #### Deepstream SDK
 
 * [DeepStream SDK](https://developer.nvidia.com/deepstream-sdk)
