@@ -10,13 +10,17 @@ This is the platform I plan to use to develop on the Jetson platform
 
 ##### Installation Instructions
 
-It only runs on Linux, so if you're on Windows, I recommend downloading Ubuntu from the Microsoft Store.
+1. (Windows) Set up Ubuntu Subsystem
 
-There is a lovely guide for how to set up the relevane X server [here](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/). This is necessary on Windows; otherwise, there is no way for the Ubuntu subsystem to spin up a display on your computer.
+  It only runs on Linux, so if you're on Windows, I recommend downloading Ubuntu from the Microsoft Store.
 
-Start up Ubuntu, and navigate to the `Downloads` folder.
+  There is a lovely guide for how to set up the relevane X server [here](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/). This is necessary on Windows; otherwise, there is no way for the Ubuntu subsystem to spin up a display on your computer.
 
-Then, execute:
+2. Install SDK Manager
+
+  Start up Ubuntu, and navigate to the `Downloads` folder.
+
+  Then, execute:
 ```
 sudo apt-get update
 sudo apt-get install libgtk-3-0
@@ -26,11 +30,11 @@ sudo apt-get install libxss1
 sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
 ```
 
-Then, with the X-server up and running, you can execute:
+  Then, with the X-server up and running, you can execute:
 ```
 sdkmanager
 ```
-This will start up the NVIDIA SDK Manager
+  This will start up the NVIDIA SDK Manager
 
 #### Deepstream SDK
 
@@ -44,3 +48,7 @@ This can be downloaded and installed through the [NVIDIA SDK Manager](#NVIDIA SD
 
 ### References
 
+* [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
+  * Huge dump of drone data for processing
+* [The UZH-FPV Drone Racing Dataset](http://rpg.ifi.uzh.ch/uzh-fpv.html)
+  * Another drone data dump; this one focuses on high-speed drone operation in particular
