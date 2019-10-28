@@ -67,7 +67,7 @@ This is the platform I plan to use to develop on the Jetson platform
 
     The SDK Manager will install [NSight Eclipse Edition](https://developer.nvidia.com/nsight-eclipse-edition) automatically.
     
-    This is the tool we can use to develop on our host machine and run the software on the Jetson device itself. I'm still figuring out the next steps on how to do this.
+    This is the tool we can use to develop on our host machine and run the software on the Jetson device itself. I'm still figuring out the next steps on how to do this. ([This](https://devblogs.nvidia.com/cuda-jetson-nvidia-nsight-eclipse-edition/) seems like a good starting point, though!)
 
 #### Deepstream SDK
 
