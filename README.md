@@ -56,6 +56,18 @@ This is the platform I plan to use to develop on the Jetson platform
     4. Have your Jetson Nano up and running
     
     The SDK Manager will guide you through the process, but it's pretty much a matter of inputting the IP Address, username, and password for your Nano, and then letting the SDK Manager handle the rest.
+    
+5. Install SDK Components onto Jetson Nano
+    
+    At some point in the flashing process, the SDK Manager will effectively wipe the contents of your Jetson Nano, and you'll need to go through the initial setup again.
+    
+    Once you set your username and password again, log in, and find your IP address again, you can select "Install" on the SDK Manager to put all the relevant development drivers onto the Nano.
+    
+6. Start Developing
+
+    The SDK Manager will install [NSight Eclipse Edition](https://developer.nvidia.com/nsight-eclipse-edition) automatically.
+    
+    This is the tool we can use to develop on our host machine and run the software on the Jetson device itself. I'm still figuring out the next steps on how to do this.
 
 #### Deepstream SDK
 
