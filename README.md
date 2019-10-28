@@ -10,23 +10,24 @@ This is the platform I plan to use to develop on the Jetson platform
 
 ##### Installation Instructions
 
-1. (Windows) Set up Ubuntu Subsystem
+**NOTE**: Native linux is required for using the NVidia SDK Manager. I tried a workaround with Windows Subsystem Linux, but in the end, this was pretty much infeasible.
 
-    It only runs on Linux, so if you're on Windows, I recommend downloading Ubuntu from the Microsoft Store.
+1. Initial OS flash on Jetson Nano
 
-    There is a lovely guide for how to set up the relevane X server [here](https://www.howtogeek.com/261575/how-to-run-graphical-linux-desktop-applications-from-windows-10s-bash-shell/). This is necessary on Windows; otherwise, there is no way for the Ubuntu subsystem to spin up a display on your computer.
+    For this, you will need a MicroSD card with the [Jetson Nano Boot Image](https://developer.nvidia.com/jetson-nano-sd-card-image-r3221) installed. Instructions can be had from [here](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit#write).
+    
+    You will need to connect it to a monitor, mouse, and keyboard to do the initial Ubuntu setup, once the disk is flashed and inserted into the device
 
 2. Install SDK Manager
 
-    Start up Ubuntu, and navigate to the `Downloads` folder.
+    Start up your linux machine, and navigate to the `Downloads` folder.
 
     Then, execute:
     ```
     sudo apt-get update
-    sudo apt-get install libgtk-3-0
-    sudo apt-get install libx11-xcb-dev
-    sudo apt-get install libxss1
-    sudo apt-get install libxss1
+    sudo apt-get -y install libgtk-3-0
+    sudo apt-get -y install libx11-xcb-dev
+    sudo apt-get -y install libxss1
     sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
     ```
 
@@ -45,13 +46,16 @@ This is the platform I plan to use to develop on the Jetson platform
 
     Note that this will take something like 20GB on your computer, so be aware before you start this process.
 
-4. (Windows) Flash Image to Board Separately
-    I haven't gotten the stuff together to make this work, but the next step (after install fails) may be to run the following commands:
-    ```
-    cd ~/nvidia/nvidia_sdk/JetPack_4.2.2_Linux_GA_P3448/Linux_for_Tegra
-    sudo ./flash.sh -S 29318MiB jetson-nano-qspi mmcblk0p1
-    ```
-    This document is definitely a work in progress.
+4. Flash the chip onto the Nano
+    
+    For this, you'll need to:
+    
+    1. Have your Jetson Nano connected to your computer with a MicroUSB connector
+    2. Have your Jetson Nano connected to your local area network, so the host computer can SSH into it
+    3. Know the IP address of your Jetson Nano (`ip addr show`)
+    4. Have your Jetson Nano up and running
+    
+    The SDK Manager will guide you through the process, but it's pretty much a matter of inputting the IP Address, username, and password for your Nano, and then letting the SDK Manager handle the rest.
 
 #### Deepstream SDK
 
