@@ -103,3 +103,6 @@ python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatase
   * Huge dump of drone data for processing
 * [The UZH-FPV Drone Racing Dataset](http://rpg.ifi.uzh.ch/uzh-fpv.html)
   * Another drone data dump; this one focuses on high-speed drone operation in particular
+* [EuRoc MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
+  * More Drone footage datasets
+* [Github Link with lists of further datasets](https://github.com/youngguncho/awesome-slam-datasets#unmanned-aerial-vehicle)
