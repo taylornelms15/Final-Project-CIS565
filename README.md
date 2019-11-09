@@ -1,5 +1,76 @@
-# Onboard UAV Photogrammetry on NVIDIA Jetson Platform
+# Drone Mom
 ## CIS565 Final Project for John Marcao, Eric Micallef, and Taylor Nelms
+
+## Build Instructions
+
+## Do not clone this repo until the instructions tell you to.
+
+you need to build a ROS workspace first...
+
+## Installation
+
+First, install the latest [JetPack](https://developer.nvidia.com/embedded/jetpack) on your Jetson (JetPack 4.2.2 for ROS Melodic or JetPack 3.3 for ROS Kinetic on TX1/TX2).
+
+Once you are logged onto your jetson continue.
+
+### ROS Core
+
+Install the `ros-melodic-ros-base`package on your Jetson following [these](
+https://www.stereolabs.com/blog/ros-and-nvidia-jetson-nano/) directions:
+
+or, here are the necessary commands ( information on the commands is in link above )
+
+```bash
+$ sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+$ sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+$ sudo apt update
+$ sudo apt install ros-melodic-desktop
+$ sudo rosdep init 
+$ rosdep update
+$ echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
+$ source ~/.bashrc
+```
+
+For our project we will need some additional nodes. Install the necessary dependencies by running the commands below. This assumees you are running ROS melodic.
+
+```bash
+$ sudo apt-get install ros-melodic-image-transport
+$ sudo apt-get install ros-melodic-image-publisher
+$ sudo apt-get install ros-melodic-vision-msgs
+```
+
+#### Create Workspace
+
+Now you must make the catkin workspace or your DroneMoM workspace. How ever you like to think about it.
+
+Instructions can be found [here](http://wiki.ros.org/ROS/Tutorials/InstallingandConfiguringROSEnvironment#Create_a_ROS_Workspace):
+
+Or follow these commands. The workspace can be created where ever you are most comfortable below is an example of mine. Please note that catkin looks for the `_ws` so a workspace names `drone_mom_ws` will fail to build.
+
+```bash
+$ mkdir -p ~/CIS565/droneMoM_ws/src
+$ cd ~/CIS565/droneMoM_ws/
+$ catkin_make
+$ catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.7m -DPYTHON_LIBRARY=/usr/lib/libpython3.7m.so
+$ source devel/setup.bash
+$ echo $ROS_PACKAGE_PATH
+```
+
+Ensure that the path from the echo output matches your path. Assuming you are running ROS melodic it will look something like this
+
+`/home/youruser/CIS565/droneMoM_ws/src:/opt/ros/melodic/share`
+
+### Clone
+
+Now you can clone this repo into the src folder of your newly crated ROS workspace!
+
+### Build 
+
+navigate to your workspace so `~/CIS565/droneMoM_ws/src`
+
+and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
+
+That is it! Now you have ROS running and can make your ROS nodes.
 
 ### Application/Framework Resources
 
@@ -106,3 +177,9 @@ python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatase
 * [EuRoc MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
   * More Drone footage datasets
 * [Github Link with lists of further datasets](https://github.com/youngguncho/awesome-slam-datasets#unmanned-aerial-vehicle)
+
+
+
+
+
+
