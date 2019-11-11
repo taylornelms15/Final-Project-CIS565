@@ -65,7 +65,6 @@ Or follow these commands. The workspace can be created where ever you are most c
 $ mkdir -p ~/CIS565/droneMoM_ws/src
 $ cd ~/CIS565/droneMoM_ws/
 $ catkin_make
-$ catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.7m -DPYTHON_LIBRARY=/usr/lib/libpython3.7m.so
 $ source devel/setup.bash
 $ echo $ROS_PACKAGE_PATH
 ```
@@ -85,6 +84,39 @@ navigate to your workspace so `~/CIS565/droneMoM_ws/src`
 and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
 
 That is it! Now you have ROS running and can make your ROS nodes.
+
+### Test 
+
+open 5 terminal.
+
+```bash
+source devel/setup.bash
+roscore
+```
+
+
+```bash
+source devel/setup.bash
+rosrun image_publisher image_publisher __name:=image_publisher ~/jetson-inference/data/images/peds_0.jpg 
+```
+
+
+```bash
+source devel/setup.bash
+rosrun ros_deep_learning detectnet _model_name:=ssd-mobilenet-v2
+```
+
+
+```bash
+source devel/setup.bash
+rosrun point_cloud point_cloud
+```
+
+
+```bash
+source devel/setup.bash
+rosrun mesh_construction meshconstruction
+```
 
 ### Application/Framework Resources
 
