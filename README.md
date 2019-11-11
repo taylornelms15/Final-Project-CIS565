@@ -87,31 +87,38 @@ That is it! Now you have ROS running and can make your ROS nodes.
 
 ### Test 
 
-open 5 terminal.
+open 5 terminals.
+
+This is our roscore terminal it is like a master node RO can only run with roscore
 
 ```bash
 source devel/setup.bash
 roscore
 ```
 
+run this last
 
 ```bash
 source devel/setup.bash
-rosrun image_publisher image_publisher __name:=image_publisher ~/jetson-inference/data/images/peds_0.jpg 
+rosrun image_publisher image_publisher __name:=image_publisher ~/CIS565/jetson-inference/data/images/peds_0.jpg 
 ```
 
+This will take about 5 minutes the first time as it needs to load the neural network
+one this node is ready the image publisher can be started
 
 ```bash
 source devel/setup.bash
 rosrun ros_deep_learning detectnet _model_name:=ssd-mobilenet-v2
 ```
 
+This is a sample app that gets messages fro mthe detectnet
 
 ```bash
 source devel/setup.bash
 rosrun point_cloud point_cloud
 ```
 
+Also a sample app 
 
 ```bash
 source devel/setup.bash
