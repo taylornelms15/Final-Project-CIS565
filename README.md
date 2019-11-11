@@ -15,6 +15,20 @@ Once you are logged onto your jetson continue.
 
 ### ROS Core
 
+These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
+
+```
+$ cd ~
+$ sudo apt-get install git cmake
+$ git clone --recursive https://github.com/dusty-nv/jetson-inference
+$ cd jetson-inference
+$ mkdir build
+$ cd build
+$ cmake ../
+$ make
+$ sudo make install
+```
+
 Install the `ros-melodic-ros-base`package on your Jetson following [these](
 https://www.stereolabs.com/blog/ros-and-nvidia-jetson-nano/) directions:
 
