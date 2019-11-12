@@ -87,9 +87,9 @@ That is it! Now you have ROS running and can make your ROS nodes.
 
 ### Test 
 
-open 5 terminals.
+open 4 terminals.
 
-This is our roscore terminal it is like a master node RO can only run with roscore
+This is our roscore terminal it is like a master node ROS can only run with roscore
 
 ```bash
 source devel/setup.bash
@@ -104,7 +104,7 @@ rosrun image_publisher image_publisher __name:=image_publisher ~/CIS565/jetson-i
 ```
 
 This will take about 5 minutes the first time as it needs to load the neural network
-one this node is ready the image publisher can be started
+once this node is ready the image publisher can be started
 
 ```bash
 source devel/setup.bash
@@ -117,12 +117,34 @@ This is a sample app that gets messages fro mthe detectnet
 source devel/setup.bash
 rosrun point_cloud point_cloud
 ```
+### Running ROS bag
 
-Also a sample app 
+you will first need to download a ros bag. Download the machine hall 01 ros bag [here](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
+
+another good one could be this [one](https://projects.asl.ethz.ch/datasets/doku.php?id=iros2018incrementalobjectdatabase)
+
+but lets worry about one thing at a time...
+
+After downloading the ros bag open 4 terminals and run these commands
 
 ```bash
 source devel/setup.bash
-rosrun mesh_construction meshconstruction
+roscore
+```
+
+```bash
+cd ~/Downloads
+rosbag play <bag you downloaded>
+
+```bash
+source devel/setup.bash
+rosrun point_cloud point_cloud
+```
+
+you should see the point could ros node print data as well as the bag. to see what topics to subscribe to or what is in the bag type in.
+
+```bash
+rosbag info <your bag>
 ```
 
 ### Application/Framework Resources
