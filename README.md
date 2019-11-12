@@ -125,7 +125,7 @@ another good one could be this [one](https://projects.asl.ethz.ch/datasets/doku.
 
 but lets worry about one thing at a time...
 
-After downloading the ros bag open 4 terminals and run these commands
+After downloading the ros bag open 3 terminals and run these commands
 
 ```bash
 source devel/setup.bash
@@ -135,6 +135,8 @@ roscore
 ```bash
 cd ~/Downloads
 rosbag play <bag you downloaded>
+```
+
 
 ```bash
 source devel/setup.bash
