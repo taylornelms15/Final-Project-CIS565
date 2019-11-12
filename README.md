@@ -79,7 +79,7 @@ Now you can clone this repo into the src folder of your newly crated ROS workspa
 
 ### Build 
 
-navigate to your workspace so `~/CIS565/droneMoM_ws/src`
+navigate to your workspace so `~/CIS565/droneMoM_ws`
 
 and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
 
