@@ -21,6 +21,7 @@
  */
 
 #include <ros/ros.h>
+#include <image_transport/image_transport.h>
 
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
@@ -33,6 +34,20 @@
 
 #include <unordered_map>
 
+// #include <opencv/cv.h>
+// #include <opencv/highgui.h>
+#include <sensor_msgs/image_encodings.h>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+
+// #include <cv_bridge/CvBridge.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+// #include <cv_bridge/cv_bridge.h>
+
+static const std::string OPENCV_WINDOW = "Image window";
 
 // globals
 detectNet* 	 net = NULL;
@@ -55,7 +70,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 void img_callback( const sensor_msgs::ImageConstPtr& input )
 {
 	// convert the image to reside on GPU
-	if( !cvt || !cvt->Convert(input) )
+	if( !cvt || !cvt->Convertmono8(input) )
 	{
 		ROS_INFO("failed to convert %ux%u %s image", input->width, input->height, input->encoding.c_str());
 		return;	
@@ -65,13 +80,30 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	detectNet::Detection* detections = NULL;
 
 	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_NONE);
+	// ROS_INFO("num detections %d",numDetections);
+ 	cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvCopy(input, sensor_msgs::image_encodings::MONO8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
 
+	// Update GUI Window
+   // cv::imshow(OPENCV_WINDOW, cv_ptr->image);
+   cv::imshow("Image window", cv_ptr->image);
+	cv::waitKey(3);    
 	// verify success	
 	if( numDetections < 0 )
 	{
 		ROS_ERROR("failed to run object detection on %ux%u image", input->width, input->height);
 		return;
 	}
+
+
 
 	// if objects were detected, send out message
 	if( numDetections > 0 )
@@ -186,6 +218,8 @@ int main(int argc, char **argv)
 	}
 
 
+cv::namedWindow(OPENCV_WINDOW);
+	
 	/*
 	 * create the class labels parameter vector
 	 */
@@ -245,8 +279,8 @@ int main(int argc, char **argv)
 	 */
 	//image_transport::ImageTransport it(nh);	// BUG - stack smashing on TX2?
 	//image_transport::Subscriber img_sub = it.subscribe("image", 1, img_callback);
-	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
+	//ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 
 	/*
 	 * wait for messages

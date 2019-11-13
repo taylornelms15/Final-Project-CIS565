@@ -41,6 +41,7 @@ imageConverter::imageConverter()
 
 	mOutputCPU = NULL;
 	mOutputGPU = NULL;
+	// cv::namedWindow(OPENCV_WINDOW);
 }
 
 
@@ -117,12 +118,12 @@ bool imageConverter::Convertmono8( const sensor_msgs::ImageConstPtr& input )
 	// copy input to shared memory
 	memcpy(mInputCPU, input->data.data(), input->width * input->height * sizeof(uint8_t));	// note: 3 channels assumes bgr/rgb			
 	
-	// // convert to RGBA32f format
-	// if( CUDA_FAILED(cudaBGR8ToRGBA32((uchar3*)mInputGPU, (float4*)mOutputGPU, mWidth, mHeight)) )
-	// {
-	// 	ROS_ERROR("failed to convert %ux%u image with CUDA", mWidth, mHeight);
-	// 	return false;
-	// }
+	// convert to RGBA32f format
+	if( CUDA_FAILED(cudaMemcpy(mInputGPU, (float4*)mOutputGPU,input->width * input->height * sizeof(uint8_t),cudaMemcpyDeviceToDevice)) )
+	{
+		ROS_ERROR("failed to convert %ux%u image with CUDA", mWidth, mHeight);
+		return false;
+	}
 
 	return true;
 }

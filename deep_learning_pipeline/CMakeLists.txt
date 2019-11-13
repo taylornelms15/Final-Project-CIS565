@@ -7,10 +7,12 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   roscpp
   sensor_msgs
+  cv_bridge
   vision_msgs
   std_msgs
 )
 
+find_package(OpenCV REQUIRED)
 find_package(jetson-utils REQUIRED)
 find_package(jetson-inference REQUIRED)
 
@@ -42,7 +44,7 @@ add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
 target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
 
 add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp)
-target_link_libraries(detectnet ${catkin_LIBRARIES} jetson-inference)
+target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} jetson-inference)
 
 add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
 target_link_libraries(segnet ${catkin_LIBRARIES} jetson-inference)
