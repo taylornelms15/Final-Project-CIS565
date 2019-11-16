@@ -149,7 +149,7 @@ you should see the point could ros node print data as well as the bag. to see wh
 rosbag info <your bag>
 ```
 
-### Application/Framework Resources
+### Application/Framework Resources CURRENTLY UNUSED IGNORE THIS
 
 #### NVIDIA SDK Manager
 * [NVidia SDK Manager](https://developer.nvidia.com/embedded/downloads)
