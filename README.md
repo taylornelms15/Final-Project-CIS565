@@ -48,9 +48,10 @@ $ source ~/.bashrc
 For our project we will need some additional nodes. Install the necessary dependencies by running the commands below. This assumees you are running ROS melodic.
 
 ```bash
-$ sudo apt-get install ros-melodic-image-transport
-$ sudo apt-get install ros-melodic-image-publisher
-$ sudo apt-get install ros-melodic-vision-msgs
+$ sudo apt-get install -y ros-melodic-image-transport
+$ sudo apt-get install -y ros-melodic-image-publisher
+$ sudo apt-get install -y ros-melodic-vision-msgs
+$ sudo apt-get install -y ros-melodic-vision-opencv
 ```
 
 #### Create Workspace
