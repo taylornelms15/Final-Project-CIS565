@@ -51,7 +51,16 @@ For our project we will need some additional nodes. Install the necessary depend
 $ sudo apt-get install -y ros-melodic-image-transport
 $ sudo apt-get install -y ros-melodic-image-publisher
 $ sudo apt-get install -y ros-melodic-vision-msgs
+$ sudo apt-get install -y ros-melodic-tf2
 $ sudo apt-get install -y ros-melodic-vision-opencv
+```
+
+### PCL
+
+Execute the following commands to install the PCL libraries:
+```
+$ sudo apt-get install -y libpcl-dev
+$ sudo apt-get install -y ros-melodic-pcl-ros
 ```
 
 #### Create Workspace
