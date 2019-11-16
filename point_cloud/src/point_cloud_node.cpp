@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include "std_msgs/String.h"
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <geometry_msgs/PointStamped.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
@@ -49,6 +51,32 @@
      }
 
    }
+
+
+      // this is registered every image sent
+   void ImuCallback(const sensor_msgs::Imu& msg)
+   {
+      // print stuff to show how stuff works
+    //http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Imu.html
+    // not sure what the numbers are supposed to look like but they seem a bit weird just FYI
+      ROS_INFO("orientation X: %9.6f", msg.orientation_covariance[0]);
+      ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
+      ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
+      ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
+      
+
+   }
+
+   //    // this is registered every image sent
+   void PositionCallback(const geometry_msgs::PointStamped& msg)
+   {
+      // print stuff to show how stuff works
+     // http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PointStamped.html
+      ROS_INFO("point X: %9.6f", msg.point.x);
+      ROS_INFO("point y: %9.6f", msg.point.y);
+      ROS_INFO("point z: %9.6f", msg.point.z);
+
+   }
    
    int main(int argc, char **argv)
    {
@@ -90,7 +118,11 @@
       */
      ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
 
-     ros::Subscriber sub2 = n.subscribe("/detectnet/detections", 1000, DetectionCallback);     
+     ros::Subscriber sub2 = n.subscribe("/detectnet/detections", 1000, DetectionCallback); 
+
+     ros::Subscriber sub3 = n.subscribe("/imu0", 1000, ImuCallback); 
+
+     ros::Subscriber sub4 = n.subscribe("/leica/position", 1000, PositionCallback);     
 
      ROS_INFO("point cloud, waiting for messages");
    

@@ -45,12 +45,17 @@ public:
 	/**
 	 * Convert to 32-bit RGBA floating point
 	 */
+	bool Convertmono8( const sensor_msgs::ImageConstPtr& input );
+
+	/**
+	 * Convert to 32-bit RGBA floating point
+	 */
 	bool Convert( const sensor_msgs::ImageConstPtr& input );
 
 	/**
 	 * Convert to ROS sensor_msgs::Image message
 	 */
-	bool Convert( sensor_msgs::Image& msg_out, const std::string& encoding );
+	bool Convert( sensor_msgs::Image& msg, const std::string& encoding );
 
 	/**
 	 * Resize the memory (if necessary)

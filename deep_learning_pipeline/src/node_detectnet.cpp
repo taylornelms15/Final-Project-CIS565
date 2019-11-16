@@ -245,8 +245,8 @@ int main(int argc, char **argv)
 	 */
 	//image_transport::ImageTransport it(nh);	// BUG - stack smashing on TX2?
 	//image_transport::Subscriber img_sub = it.subscribe("image", 1, img_callback);
+	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
 	ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
-	
 
 	/*
 	 * wait for messages
