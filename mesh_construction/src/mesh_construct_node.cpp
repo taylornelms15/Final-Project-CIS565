@@ -130,6 +130,13 @@ static int iteration = 0;
 	  std::string filename = "mesh_" + std::to_string(iteration) + ".vtk";
 	  pcl::io::saveVTKFile (filename, triangles);
    }
+
+   // this is registered every image sent
+   void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
+   {
+     ROS_INFO("Got message!");
+   }
+   
    
    
    int main(int argc, char **argv)

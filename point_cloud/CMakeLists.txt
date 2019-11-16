@@ -156,8 +156,9 @@ add_executable(${PROJECT_NAME} src/point_cloud_node.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} )
-
+ target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} )
+ target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} )
+ target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} )
 #############
 ## Install ##
 #############
