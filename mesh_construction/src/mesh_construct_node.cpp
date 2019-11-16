@@ -4,6 +4,19 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/surface/gp3.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <string.h>
+#include <sstream>
+#include <iomanip>
+#include <pcl/io/vtk_io.h>
+
+static int iteration = 0;
 
    std::vector<std::string> class_descriptions;
    std::string key;
@@ -48,13 +61,74 @@
         ROS_INFO("classified: %s", class_descriptions[idx].c_str());
 
      }
-
    }
 
    // this is registered every image sent
    void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
    {
      ROS_INFO("Got message!");
+
+	// Example code below from http://www.pointclouds.org/documentation/tutorials/greedy_projection.php
+
+     pcl::PCLPointCloud2* conv_cloud = new pcl::PCLPointCloud2;
+     // Note, moveToPCL destroys the message structure.
+     pcl_conversions::toPCL(msg, *conv_cloud);
+
+     // Now move to totally independent PCL Functions
+     // ROS dependence stops here
+     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+     pcl::fromPCLPointCloud2 (*conv_cloud, *cloud);
+
+     // Now cloud is in PCL data type, this can be massaged to create triangle meshes
+     // and ultimately GLTF files.
+
+	  // Normal estimation*
+	  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> n;
+	  pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+	  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
+	  tree->setInputCloud (cloud);
+	  n.setInputCloud (cloud);
+	  n.setSearchMethod (tree);
+	  n.setKSearch (20);
+	  n.compute (*normals);
+	  //* normals should not contain the point normals + surface curvatures
+
+	  // Concatenate the XYZ and normal fields*
+	  pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+	  pcl::concatenateFields (*cloud, *normals, *cloud_with_normals);
+	  //* cloud_with_normals = cloud + normals
+
+	  // Create search tree*
+	  pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
+	  tree2->setInputCloud (cloud_with_normals);
+
+	  // Initialize objects
+	  pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
+	  pcl::PolygonMesh triangles;
+
+	  // Set the maximum distance between connected points (maximum edge length)
+	  gp3.setSearchRadius (0.025);
+
+	  // Set typical values for the parameters
+	  gp3.setMu (2.5);
+	  gp3.setMaximumNearestNeighbors (100);
+	  gp3.setMaximumSurfaceAngle(M_PI/4); // 45 degrees
+	  gp3.setMinimumAngle(M_PI/18); // 10 degrees
+	  gp3.setMaximumAngle(2*M_PI/3); // 120 degrees
+	  gp3.setNormalConsistency(false);
+
+	  // Get result
+	  gp3.setInputCloud (cloud_with_normals);
+	  gp3.setSearchMethod (tree2);
+	  gp3.reconstruct (triangles);
+
+	  // Additional vertex information
+	  std::vector<int> parts = gp3.getPartIDs();
+	  std::vector<int> states = gp3.getPointStates();
+
+	  iteration++;
+	  std::string filename = "mesh_" + std::to_string(iteration) + ".vtk";
+	  pcl::io::saveVTKFile (filename, triangles);
    }
    
    

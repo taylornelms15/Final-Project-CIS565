@@ -51,6 +51,7 @@ For our project we will need some additional nodes. Install the necessary depend
 $ sudo apt-get install -y ros-melodic-image-transport
 $ sudo apt-get install -y ros-melodic-image-publisher
 $ sudo apt-get install -y ros-melodic-vision-msgs
+$ sudo apt-get install -y ros-melodic-pcl-ros
 $ sudo apt-get install -y ros-melodic-vision-opencv
 ```
 
