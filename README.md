@@ -54,6 +54,13 @@ $ sudo apt-get install -y ros-melodic-vision-msgs
 $ sudo apt-get install -y ros-melodic-vision-opencv
 ```
 
+### PCL
+
+Execute the following commands to install the PCL libraries:
+```
+$ sudo apt-get install -y libpcl-dev
+```
+
 #### Create Workspace
 
 Now you must make the catkin workspace or your DroneMoM workspace. How ever you like to think about it.
