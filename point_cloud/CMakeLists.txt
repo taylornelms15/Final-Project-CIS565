@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   vision_msgs
 )
 
+find_package(PCL REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -121,6 +123,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+include_directories(${PCL_INCLUDE_DIRS})
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/point_cloud.cpp
@@ -148,7 +152,7 @@ add_executable(${PROJECT_NAME} src/point_cloud_node.cpp)
 
 ## Specify libraries to link a library or executable target against
  target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} )
-
+ target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} )
 #############
 ## Install ##
 #############
