@@ -59,6 +59,7 @@ $ sudo apt-get install -y ros-melodic-vision-opencv
 Execute the following commands to install the PCL libraries:
 ```
 $ sudo apt-get install -y libpcl-dev
+$ sudo apt-get install -y ros-melodic-pcl-ros
 ```
 
 #### Create Workspace
