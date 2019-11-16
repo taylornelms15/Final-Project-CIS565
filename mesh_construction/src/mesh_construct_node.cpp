@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include "std_msgs/String.h"
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
@@ -49,6 +50,13 @@
      }
 
    }
+
+   // this is registered every image sent
+   void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
+   {
+     ROS_INFO("Got message!");
+   }
+   
    
    int main(int argc, char **argv)
    {
@@ -91,6 +99,8 @@
      ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
 
      ros::Subscriber sub2 = n.subscribe("/detectnet/detections", 1000, DetectionCallback);     
+
+     ros::Subscriber sub3 = n.subscribe("/point_cloud_G", 1000, PointCloud2Callback);
 
      ROS_INFO("point cloud, waiting for messages");
    
