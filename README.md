@@ -63,6 +63,28 @@ $ sudo apt-get install -y libpcl-dev
 $ sudo apt-get install -y ros-melodic-pcl-ros
 ```
 
+### OpenCV Advanced features
+
+We are using some of the non-standard features from OpenCV (specifically, SURF feature detection). As such, we need to compile and build OpenCV from source. [This Link](https://linuxize.com/post/how-to-install-opencv-on-ubuntu-18-04/) shows how to do it; alternatively, follow these steps:
+
+```
+mkdir ~/opencv_build && cd ~/opencv_build
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+cd ~/opencv_build/opencv
+mkdir build && cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D INSTALL_C_EXAMPLES=ON \
+    -D INSTALL_PYTHON_EXAMPLES=ON \
+    -D OPENCV_GENERATE_PKGCONFIG=ON \
+    -D OPENCV_EXTRA_MODULES_PATH=~/opencv_build/opencv_contrib/modules \
+    -D OPENCV_ENABLE_NONFREE=ON ..
+make -j4
+sudo make install
+```
+This process may take a little bit to complete.
+
 #### Create Workspace
 
 Now you must make the catkin workspace or your DroneMoM workspace. How ever you like to think about it.
