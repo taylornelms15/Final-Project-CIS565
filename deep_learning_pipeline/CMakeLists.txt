@@ -49,7 +49,7 @@ CUDA_ADD_LIBRARY(CUDA_UTIL ${LIB_TYPE} cuda_utilities/image_net.cuh)
 add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
 target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
 
-add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp inference/ModelImporter.cpp inference/ObjectDetection.cpp )
+add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp inference/ModelImporter.cpp inference/ObjectDetection.cpp nvidia_files/randInt8Calibrator.cpp)
 
 target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} jetson-inference CUDA_UTIL)
 
