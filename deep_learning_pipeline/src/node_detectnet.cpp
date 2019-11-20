@@ -21,7 +21,6 @@
  */
 
 #include <ros/ros.h>
-#include <image_transport/image_transport.h>
 
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
@@ -34,20 +33,6 @@
 
 #include <unordered_map>
 
-// #include <opencv/cv.h>
-// #include <opencv/highgui.h>
-#include <sensor_msgs/image_encodings.h>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/core.hpp>
-
-// #include <cv_bridge/CvBridge.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-// #include <cv_bridge/cv_bridge.h>
-
-static const std::string OPENCV_WINDOW = "Image window";
 
 // globals
 detectNet* 	 net = NULL;
@@ -70,7 +55,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 void img_callback( const sensor_msgs::ImageConstPtr& input )
 {
 	// convert the image to reside on GPU
-	if( !cvt || !cvt->Convertmono8(input) )
+	if( !cvt || !cvt->Convert(input) )
 	{
 		ROS_INFO("failed to convert %ux%u %s image", input->width, input->height, input->encoding.c_str());
 		return;	
@@ -80,30 +65,13 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	detectNet::Detection* detections = NULL;
 
 	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_NONE);
-	// ROS_INFO("num detections %d",numDetections);
- 	cv_bridge::CvImagePtr cv_ptr;
-    try
-    {
-      cv_ptr = cv_bridge::toCvCopy(input, sensor_msgs::image_encodings::MONO8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
 
-	// Update GUI Window
-   // cv::imshow(OPENCV_WINDOW, cv_ptr->image);
-   cv::imshow("Image window", cv_ptr->image);
-	cv::waitKey(3);    
 	// verify success	
 	if( numDetections < 0 )
 	{
 		ROS_ERROR("failed to run object detection on %ux%u image", input->width, input->height);
 		return;
 	}
-
-
 
 	// if objects were detected, send out message
 	if( numDetections > 0 )
@@ -158,58 +126,35 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 	ros::NodeHandle private_nh("~");
 
-	/*
-	 * retrieve parameters
-	 */
-	std::string class_labels_path;
-	std::string prototxt_path;
-	std::string model_path;
+	// std::string class_labels_path;
+	// std::string prototxt_path;
+	// std::string model_path;
 	std::string model_name;
 
-	bool use_model_name = false;
 
-	// determine if custom model paths were specified
-	if( !private_nh.getParam("prototxt_path", prototxt_path) ||
-	    !private_nh.getParam("model_path", model_path) )
-	{
-		// without custom model, use one of the built-in pretrained models
-		private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
-		use_model_name = true;
-	}
+	// default parameter is to use the ssd mobilenet
+	private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
 
 	// set mean pixel and threshold defaults
 	float mean_pixel = 0.0f;
 	float threshold  = 0.5f;
 	
+	//
 	private_nh.param<float>("mean_pixel_value", mean_pixel, mean_pixel);
 	private_nh.param<float>("threshold", threshold, threshold);
 
+	//
+	detectNet::NetworkType model = detectNet::NetworkTypeFromStr(model_name.c_str());
 
-	/*
-	 * load object detection network
-	 */
-	if( use_model_name )
+	// 
+	if( model == detectNet::ERROR )
 	{
-		// determine which built-in model was requested
-		detectNet::NetworkType model = detectNet::NetworkTypeFromStr(model_name.c_str());
-
-		if( model == detectNet::CUSTOM )
-		{
-			ROS_ERROR("invalid built-in pretrained model name '%s', defaulting to pednet", model_name.c_str());
-			model = detectNet::PEDNET;
-		}
-
-		// create network using the built-in model
-		net = detectNet::Create(model);
+		ROS_ERROR("invalid built-in pretrained model name '%s', defaulting to pednet", model_name.c_str());
+		return 0;
 	}
-	else
-	{
-		// get the class labels path (optional)
-		private_nh.getParam("class_labels_path", class_labels_path);
 
-		// create network using custom model paths
-		net = detectNet::Create(prototxt_path.c_str(), model_path.c_str(), mean_pixel, class_labels_path.c_str(), threshold);
-	}
+	// create network
+	net = detectNet::Create(model);
 
 	if( !net )
 	{
@@ -218,8 +163,6 @@ int main(int argc, char **argv)
 	}
 
 
-cv::namedWindow(OPENCV_WINDOW);
-	
 	/*
 	 * create the class labels parameter vector
 	 */
@@ -241,14 +184,16 @@ cv::namedWindow(OPENCV_WINDOW);
 	std::string class_key = std::string("class_labels_") + std::to_string(model_hash);
 	private_nh.setParam(class_key, class_descriptions);
 		
-	// populate the vision info msg
+	// 
 	std::string node_namespace = private_nh.getNamespace();
 	ROS_INFO("node namespace => %s", node_namespace.c_str());
 
+	//
 	info_msg.database_location = node_namespace + std::string("/") + class_key;
 	info_msg.database_version  = 0;
 	info_msg.method 		  = net->GetModelPath();
 	
+	//
 	ROS_INFO("class labels => %s", info_msg.database_location.c_str());
 
 
@@ -277,10 +222,8 @@ cv::namedWindow(OPENCV_WINDOW);
 	/*
 	 * subscribe to image topic
 	 */
-	//image_transport::ImageTransport it(nh);	// BUG - stack smashing on TX2?
-	//image_transport::Subscriber img_sub = it.subscribe("image", 1, img_callback);
-	ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	//ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
+	ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 
 	/*
 	 * wait for messages
