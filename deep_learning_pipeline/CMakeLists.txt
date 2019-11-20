@@ -39,13 +39,19 @@ include_directories(
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 
+SET(CUDA_NVCC_FLAGS "-arch=sm_72" CACHE STRING "nvcc flags" FORCE)
+SET(CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE)
+SET(LIB_TYPE STATIC)
+CUDA_ADD_LIBRARY(CUDA_UTIL ${LIB_TYPE} cuda_utilities/image_net.cuh)
+
+
 # inference nodes
 add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
 target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
 
-add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp inference/ModelImporter.cpp inference/ObjectDetection.cpp)
+add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp inference/ModelImporter.cpp inference/ObjectDetection.cpp )
 
-target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} jetson-inference)
+target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} jetson-inference CUDA_UTIL)
 
 add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
 target_link_libraries(segnet ${catkin_LIBRARIES} jetson-inference)
