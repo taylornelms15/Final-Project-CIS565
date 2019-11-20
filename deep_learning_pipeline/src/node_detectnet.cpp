@@ -35,7 +35,7 @@
 
 
 // globals
-detectNet* 	 net = NULL;
+ObjectDetection* 	 net = NULL;
 imageConverter* cvt = NULL;
 
 ros::Publisher* detection_pub = NULL;
@@ -62,9 +62,9 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	}
 
 	// classify the image
-	detectNet::Detection* detections = NULL;
+	ObjectDetection::Detection* detections = NULL;
 
-	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_NONE);
+	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, ObjectDetection::OVERLAY_NONE);
 
 	// verify success	
 	if( numDetections < 0 )
@@ -144,17 +144,17 @@ int main(int argc, char **argv)
 	private_nh.param<float>("threshold", threshold, threshold);
 
 	//
-	detectNet::NetworkType model = detectNet::NetworkTypeFromStr(model_name.c_str());
+	ObjectDetection::NetworkType model = ObjectDetection::NetworkTypeFromStr(model_name.c_str());
 
 	// 
-	if( model == detectNet::ERROR )
+	if( model == ObjectDetection::ERROR )
 	{
 		ROS_ERROR("invalid built-in pretrained model name '%s', defaulting to pednet", model_name.c_str());
 		return 0;
 	}
 
 	// create network
-	net = detectNet::Create(model);
+	net = ObjectDetection::Create(model);
 
 	if( !net )
 	{

@@ -153,22 +153,22 @@ public:
 	/**
  	 * Return true if GPU fallback is enabled.
 	 */
-	inline bool AllowGPUFallback() const				{ return mAllowGPUFallback; }
+	inline bool AllowGPUFallback() const				{ return TRTAllowGPUFallback; }
 
 	/**
  	 * Retrieve the device being used for execution.
 	 */
-	inline deviceType GetDevice() const				{ return mDevice; }
+	inline deviceType GetDevice() const				{ return TRTDevice; }
 
 	/**
 	 * Retrieve the type of precision being used.
 	 */
-	inline precisionType GetPrecision() const			{ return mPrecision; }
+	inline precisionType GetPrecision() const			{ return TRTPrecision; }
 
 	/**
 	 * Check if a particular precision is being used.
 	 */
-	inline bool IsPrecision( precisionType type ) const	{ return (mPrecision == type); }
+	inline bool IsPrecision( precisionType type ) const	{ return (TRTPrecision == type); }
 
 	/**
 	 * Determine the fastest native precision on a device.
@@ -183,7 +183,7 @@ public:
 	/**
 	 * Retrieve the stream that the device is operating on.
 	 */
-	inline cudaStream_t GetStream() const				{ return mStream; }
+	inline cudaStream_t GetStream() const				{ return TRTStream; }
 
 	/**
 	 * Create and use a new stream for execution.
@@ -198,22 +198,22 @@ public:
 	/**
 	 * Retrieve the path to the network prototxt file.
 	 */
-	inline const char* GetPrototxtPath() const			{ return mPrototxtPath.c_str(); }
+	inline const char* GetPrototxtPath() const			{ return TRTPrototxtPath.c_str(); }
 
 	/**
 	 * Retrieve the path to the network model file.
 	 */
-	inline const char* GetModelPath() const				{ return mModelPath.c_str(); }
+	inline const char* GetModelPath() const				{ return TRTModelPath.c_str(); }
 
 	/**
 	 * Retrieve the format of the network model.
 	 */
-	inline modelType GetModelType() const				{ return mModelType; }
+	inline modelType GetModelType() const				{ return TRTModelType; }
 
 	/**
 	 * Return true if the model is of the specified format.
 	 */
-	inline bool IsModelType( modelType type ) const		{ return (mModelType == type); }
+	inline bool IsModelType( modelType type ) const		{ return (TRTModelType == type); }
 
 protected:
 

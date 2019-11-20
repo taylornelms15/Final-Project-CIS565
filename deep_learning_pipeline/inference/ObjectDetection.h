@@ -144,7 +144,7 @@ public:
 	/**
 	 * Destroy
 	 */
-	virtual ~detectNet();
+	virtual ~ObjectDetection();
 	
 	/**
 	 * Detect object locations from an RGBA image, returning an array containing the detection results.
@@ -221,7 +221,7 @@ public:
 protected:
 
 	// constructor
-	detectNet( float meanPixel=0.0f );
+	ObjectDetection( float meanPixel=0.0f );
 
 	bool allocDetections();
 	bool defaultColors();
