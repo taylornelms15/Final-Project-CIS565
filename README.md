@@ -17,16 +17,16 @@ Once you are logged onto your jetson continue.
 
 These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
 
-```
-$ cd ~
-$ sudo apt-get install git cmake
-$ git clone --recursive https://github.com/dusty-nv/jetson-inference
-$ cd jetson-inference
-$ mkdir build
-$ cd build
-$ cmake ../
-$ make
-$ sudo make install
+```bash
+cd ~
+sudo apt-get install git cmake
+git clone --recursive https://github.com/dusty-nv/jetson-inference
+cd jetson-inference
+mkdir build
+cd build
+cmake ../
+make
+sudo make install
 ```
 
 Install the `ros-melodic-ros-base`package on your Jetson following [these](
@@ -35,23 +35,53 @@ https://www.stereolabs.com/blog/ros-and-nvidia-jetson-nano/) directions:
 or, here are the necessary commands ( information on the commands is in link above )
 
 ```bash
-$ sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-$ sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-$ sudo apt update
-$ sudo apt install ros-melodic-desktop
-$ sudo rosdep init 
-$ rosdep update
-$ echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
-$ source ~/.bashrc
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt update
+sudo apt install ros-melodic-desktop
+sudo rosdep init 
+rosdep update
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
+source ~/.bashrc
 ```
 
 For our project we will need some additional nodes. Install the necessary dependencies by running the commands below. This assumees you are running ROS melodic.
 
 ```bash
-$ sudo apt-get install ros-melodic-image-transport
-$ sudo apt-get install ros-melodic-image-publisher
-$ sudo apt-get install ros-melodic-vision-msgs
+sudo apt-get install -y ros-melodic-image-transport ros-melodic-image-publisher ros-melodic-vision-msgs ros-melodic-tf2
 ```
+
+### PCL
+
+Execute the following commands to install the PCL libraries:
+
+```bash
+sudo apt-get install -y libpcl-dev ros-melodic-pcl-ros
+```
+
+### OpenCV Advanced features
+
+We are using some of the non-standard features from OpenCV (specifically, SURF feature detection). As such, we need to compile and build OpenCV from source. [This Link](https://linuxize.com/post/how-to-install-opencv-on-ubuntu-18-04/) shows how to do it; alternatively, follow these steps:
+
+```bash
+sudo apt-get install -y build-essential cmake git pkg-config libgtk-3-dev
+sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev
+sudo apt-get install -y libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev libtbb2 libtbb-dev libdc1394-22-dev
+
+mkdir ~/opencv_build && cd ~/opencv_build
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+cd ~/opencv_build/opencv
+mkdir build && cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D OPENCV_GENERATE_PKGCONFIG=ON \
+    -D OPENCV_EXTRA_MODULES_PATH=~/opencv_build/opencv_contrib/modules \
+    -D OPENCV_ENABLE_NONFREE=ON ..
+make -j4
+sudo make install
+```
+This process may take a little bit to complete.
 
 #### Create Workspace
 
@@ -62,11 +92,11 @@ Instructions can be found [here](http://wiki.ros.org/ROS/Tutorials/Installingand
 Or follow these commands. The workspace can be created where ever you are most comfortable below is an example of mine. Please note that catkin looks for the `_ws` so a workspace names `drone_mom_ws` will fail to build.
 
 ```bash
-$ mkdir -p ~/CIS565/droneMoM_ws/src
-$ cd ~/CIS565/droneMoM_ws/
-$ catkin_make
-$ source devel/setup.bash
-$ echo $ROS_PACKAGE_PATH
+mkdir -p ~/CIS565/droneMoM_ws/src
+cd ~/CIS565/droneMoM_ws/
+catkin_make
+source devel/setup.bash
+echo $ROS_PACKAGE_PATH
 ```
 
 Ensure that the path from the echo output matches your path. Assuming you are running ROS melodic it will look something like this
@@ -149,7 +179,7 @@ you should see the point could ros node print data as well as the bag. to see wh
 rosbag info <your bag>
 ```
 
-### Application/Framework Resources
+### Application/Framework Resources CURRENTLY UNUSED IGNORE THIS
 
 #### NVIDIA SDK Manager
 * [NVidia SDK Manager](https://developer.nvidia.com/embedded/downloads)
