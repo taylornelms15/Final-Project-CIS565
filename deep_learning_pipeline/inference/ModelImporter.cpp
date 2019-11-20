@@ -61,7 +61,6 @@ precisionType precisionTypeFromStr( const char* str )
 }
 
 //
-//
 // 
 static inline nvinfer1::DataType precisionTypeToTRT( precisionType type )
 {
@@ -900,6 +899,6 @@ cudaStream_t ModelImporter::CreateStream( bool nonBlocking )
 // SetStream
 void ModelImporter::SetStream( cudaStream_t stream )
 {
-	mStream = stream;
+	TRTStream = stream;
 }	
 

@@ -9,3 +9,4 @@
 [ ] Learn machine learning
 [ ] figure out what I am doing...
 [ ] Remove dependencies from libraries
+[ ] Make a dope benchmarker
