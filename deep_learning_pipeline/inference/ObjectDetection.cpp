@@ -126,12 +126,14 @@ static detectNet* ObjectDetection::CreateUFF( const char* model, const char* cla
 
 
 // These are all pre trained models I have. Will get more for testing
-static detectNet* ObjectDetection::CreateModel( NetworkType networkType, float threshold, uint32_t maxBatchSize)
+static detectNet* ObjectDetection::CreateModel( NetworkType networkType)
 {
 	// for now we make this default values later we can maybe do some CLI
 	precisionType precision = TYPE_FASTEST;
 	deviceType device = DEVICE_GPU;
 	bool allowGPUFallback = true;
+	float threshold=DETECTNET_DEFAULT_THRESHOLD;
+	uint32_t maxBatchSize=DEFAULT_MAX_BATCH_SIZE;
 
 
 	if( networkType == SSD_INCEPTION_V2 )
@@ -165,45 +167,15 @@ detectNet::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelNam
 
 
 // Create
-detectNet* ObjectDetection::Create( int argc, char** argv )
+ObjectDetection* ObjectDetection::Create( NetworkType model )
 {
-	detectNet* net = NULL;
-
-	// parse command line parameters
-	commandLine cmdLine(argc, argv);
-
-	// get the network from command line
-	const char* modelName = cmdLine.GetString("network");
-
-	// no model name so choose mobile net as default
-	if( !modelName )
-		modelName = cmdLine.GetString("model", "ssd-mobilenet-v2");
-
-	float threshold = cmdLine.GetFloat("threshold");
+	ObjectDetection* net = new detectNet();
 	
-	if( threshold == 0.0f )
-		threshold = DETECTNET_DEFAULT_THRESHOLD;
-	
-	int maxBatchSize = cmdLine.GetInt("batch_size");
-	
-	if( maxBatchSize < 1 )
-		maxBatchSize = DEFAULT_MAX_BATCH_SIZE;
-
-	// parse the model type
-	const detectNet::NetworkType type = NetworkTypeFromStr(modelName);
-
-	// create detectNet from pretrained model
-	net = detectNet::Create(type, threshold, maxBatchSize);
-
 	if( !net )
 		return NULL;
 
-	// // enable layer profiling if desired
-	// if( cmdLine.GetFlag("profile") )
-	// 	net->EnableLayerProfiler();
-
-	// set overlay alpha value
-	net->SetOverlayAlpha(cmdLine.GetFloat("alpha", DETECTNET_DEFAULT_ALPHA));
+	if( !net->CreateModel( model ) )
+		return NULL;
 
 	return net;
 }
