@@ -83,7 +83,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 
 		for( int n=0; n < numDetections; n++ )
 		{
-			detectNet::Detection* det = detections + n;
+			ObjectDetection::Detection* det = detections + n;
 
 			printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
 			printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
