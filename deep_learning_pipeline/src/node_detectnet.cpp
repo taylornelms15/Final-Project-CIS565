@@ -26,7 +26,7 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
-#include <jetson-inference/detectNet.h>
+#include <../inference/ObjectDetection.h>
 #include <jetson-utils/cudaMappedMemory.h>
 
 #include "image_converter.h"
