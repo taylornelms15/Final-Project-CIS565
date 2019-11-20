@@ -17,16 +17,16 @@ Once you are logged onto your jetson continue.
 
 These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
 
-```
-$ cd ~
-$ sudo apt-get install git cmake
-$ git clone --recursive https://github.com/dusty-nv/jetson-inference
-$ cd jetson-inference
-$ mkdir build
-$ cd build
-$ cmake ../
-$ make
-$ sudo make install
+```bash
+cd ~
+sudo apt-get install git cmake
+git clone --recursive https://github.com/dusty-nv/jetson-inference
+cd jetson-inference
+mkdir build
+cd build
+cmake ../
+make
+sudo make install
 ```
 
 Install the `ros-melodic-ros-base`package on your Jetson following [these](
@@ -35,32 +35,28 @@ https://www.stereolabs.com/blog/ros-and-nvidia-jetson-nano/) directions:
 or, here are the necessary commands ( information on the commands is in link above )
 
 ```bash
-$ sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-$ sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-$ sudo apt update
-$ sudo apt install ros-melodic-desktop
-$ sudo rosdep init 
-$ rosdep update
-$ echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
-$ source ~/.bashrc
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt update
+sudo apt install ros-melodic-desktop
+sudo rosdep init 
+rosdep update
+echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc 
+source ~/.bashrc
 ```
 
 For our project we will need some additional nodes. Install the necessary dependencies by running the commands below. This assumees you are running ROS melodic.
 
 ```bash
-$ sudo apt-get install -y ros-melodic-image-transport
-$ sudo apt-get install -y ros-melodic-image-publisher
-$ sudo apt-get install -y ros-melodic-vision-msgs
-$ sudo apt-get install -y ros-melodic-tf2
-$ sudo apt-get install -y ros-melodic-vision-opencv
+sudo apt-get install -y ros-melodic-image-transport ros-melodic-image-publisher ros-melodic-vision-msgs ros-melodic-tf2
 ```
 
 ### PCL
 
 Execute the following commands to install the PCL libraries:
-```
-$ sudo apt-get install -y libpcl-dev
-$ sudo apt-get install -y ros-melodic-pcl-ros
+
+```bash
+sudo apt-get install -y libpcl-dev ros-melodic-pcl-ros
 ```
 
 ### OpenCV Advanced features
@@ -98,11 +94,11 @@ Instructions can be found [here](http://wiki.ros.org/ROS/Tutorials/Installingand
 Or follow these commands. The workspace can be created where ever you are most comfortable below is an example of mine. Please note that catkin looks for the `_ws` so a workspace names `drone_mom_ws` will fail to build.
 
 ```bash
-$ mkdir -p ~/CIS565/droneMoM_ws/src
-$ cd ~/CIS565/droneMoM_ws/
-$ catkin_make
-$ source devel/setup.bash
-$ echo $ROS_PACKAGE_PATH
+mkdir -p ~/CIS565/droneMoM_ws/src
+cd ~/CIS565/droneMoM_ws/
+catkin_make
+source devel/setup.bash
+echo $ROS_PACKAGE_PATH
 ```
 
 Ensure that the path from the echo output matches your path. Assuming you are running ROS melodic it will look something like this
