@@ -4,7 +4,7 @@
 #define __OBJECT_DETECTION_H__s
 
 
-#include "tensorNet.h"
+#include "ModelImporter.h" 
 
 /**
  * Default value of the minimum detection threshold
