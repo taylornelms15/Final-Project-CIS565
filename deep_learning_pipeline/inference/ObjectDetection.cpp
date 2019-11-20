@@ -167,7 +167,7 @@ ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* mo
 
 
 // Create
-ObjectDetection* ObjectDetection::Create( NetworkType model )
+ObjectDetection::ObjectDetection* ObjectDetection::Create( NetworkType model )
 {
 	ObjectDetection* net = new detectNet();
 	
