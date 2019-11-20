@@ -1,6 +1,6 @@
 
  
-#include "detectNet.h"
+#include "ObjectDetection.h"
 #include "imageNet.cuh"
 
 #include "cudaMappedMemory.h"
