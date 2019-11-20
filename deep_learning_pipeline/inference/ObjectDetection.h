@@ -139,7 +139,7 @@ public:
 	/**
 	 * Load a new network instance by parsing the command line.
 	 */
-	ObjectDetection* Create( ObjectDetection::NetworkType model );
+	ObjectDetection* Create( NetworkType model );
 
 	/**
 	 * Destroy

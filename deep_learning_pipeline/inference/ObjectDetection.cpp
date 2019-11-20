@@ -148,7 +148,7 @@ static detectNet* ObjectDetection::CreateModel( NetworkType networkType)
 
 
 // NetworkTypeFromStr
-detectNet::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelName )
+ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelName )
 {
 	if( !modelName )
 		return detectNet::ERROR;
