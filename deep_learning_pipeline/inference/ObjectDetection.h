@@ -143,7 +143,7 @@ public:
 	 * Destroy
 	 */
 	virtual ~ObjectDetection();
-	
+
 	/**
 	 * Detect object locations from an RGBA image, returning an array containing the detection results.
 	 * @param[in]  input float4 RGBA input image in CUDA device memory.
@@ -153,7 +153,19 @@ public:
 	 * @param[in]  overlay bitwise OR combination of overlay flags (@see OverlayFlags and @see Overlay()), or OVERLAY_NONE.
 	 * @returns    The number of detected objects, 0 if there were no detected objects, and -1 if an error was encountered.
 	 */
-	int Detect( float* input, uint32_t width, uint32_t height, Detection** detections, uint32_t overlay );
+	int Detect( float* input, uint32_t width, uint32_t height, Detection** detections, uint32_t overlay=OVERLAY_BOX );
+	
+	/**
+	 * Detect object locations in an RGBA image, into an array of the results allocated by the user.
+	 * @param[in]  input float4 RGBA input image in CUDA device memory.
+	 * @param[in]  width width of the input image in pixels.
+	 * @param[in]  height height of the input image in pixels.
+	 * @param[out] detections pointer to user-allocated array that will be filled with the detection results.
+	 *                        @see GetMaxDetections() for the number of detection results that should be allocated in this buffer.
+	 * @param[in]  overlay bitwise OR combination of overlay flags (@see OverlayFlags and @see Overlay()), or OVERLAY_NONE.
+	 * @returns    The number of detected objects, 0 if there were no detected objects, and -1 if an error was encountered.
+	 */
+	int Detect( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t overlay=OVERLAY_BOX );
 	
 	/**
 	 * Draw the detected bounding boxes overlayed on an RGBA image.
@@ -250,7 +262,7 @@ protected:
 	uint32_t   TRTDetectionSet;	// index of next detection set to use
 	uint32_t	 TRTMaxDetections;	// number of raw detections in the grid
 
-	static const uint32_t mNumDetectionSets = 16; // size of detection ringbuffer
+	static const uint32_t TRTNumDetectionSets = 16; // size of detection ringbuffer
 };
 
 

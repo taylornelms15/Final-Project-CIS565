@@ -51,7 +51,7 @@ enum precisionType
 	TYPE_FP32,		/**< 32-bit floating-point precision (FP32) */
 	TYPE_FP16,		/**< 16-bit floating-point half precision (FP16) */
 	TYPE_INT8,		/**< 8-bit integer precision (INT8) */
-	TYPE_ERROR		/**< Number of precision types defined */
+	NUM_PRECISIONS
 };
 
 /**

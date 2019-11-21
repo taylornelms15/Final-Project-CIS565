@@ -2,6 +2,7 @@
  
 #include "ObjectDetection.h"
 #include "../cuda_utilities/imageNet.cuh"
+#include "../cuda_utilities/DetectNet.cuh"
 
 #include "../cuda_utilities/cudaMappedMemory.h"
 // dont think ill need this
@@ -9,7 +10,7 @@
 
 #include "../nvidia_files/commandLine.h"
 #include "../nvidia_files/filesystem.h"
-
+#include <assert.h>
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map
 // #define OUTPUT_BBOX 1	// Caffe has separate output layer for bounding box
@@ -156,7 +157,7 @@ ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* mo
 
 	ObjectDetection::NetworkType type = ObjectDetection::ERROR;
 
-	else if( strcasecmp(modelName, "ssd-inception") == 0 )
+	if( strcasecmp(modelName, "ssd-inception") == 0 )
 		type = ObjectDetection::SSD_INCEPTION_V2;
 	else if( strcasecmp(modelName, "ssd-mobilenet-v1") == 0 )
 		type = ObjectDetection::SSD_MOBILENET_V1;
@@ -175,7 +176,7 @@ ObjectDetection* ObjectDetection::Create( NetworkType model )
 	if( !net )
 		return NULL;
 
-	if( !net->CreateModel( model ) )
+	if( CreateModel( model ) )
 		return NULL;
 
 	return net;
@@ -199,7 +200,7 @@ bool ObjectDetection::allocDetections()
 		printf("detectNet -- using ONNX model\n");
 	}
 	else{
-		assert(IsModelType(MODEL_ONNX));
+		assert(0);
 	}
 
 	printf("detectNet -- maximum bounding boxes:  %u\n", TRTMaxDetections);
@@ -252,7 +253,7 @@ bool ObjectDetection::defaultColors()
 			TRTClassColors[0][i*4+2] = b;
 			TRTClassColors[0][i*4+3] = DETECTNET_DEFAULT_ALPHA; 
 
-			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)alpha);
+			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)DETECTNET_DEFAULT_ALPHA);
 		}
 	}
 	else
@@ -486,7 +487,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 			detections[numDetections].Right      = object_data[5] * width;
 			detections[numDetections].Bottom	  = object_data[6] * height;
 
-			if( detections[numDetections].ClassID >= mNumClasses )
+			if( detections[numDetections].ClassID >= TRTNumClasses )
 			{
 				printf(LOG_TRT "detectNet::Detect() -- detected object has invalid classID (%u)\n", detections[numDetections].ClassID);
 				detections[numDetections].ClassID = 0;
@@ -523,7 +524,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		numDetections++;
 	}
 
-	PROFILER_END(PROFILER_POSTPROCESS);
+	// PROFILER_END(PROFILER_POSTPROCESS);
 
 	// render the overlay
 	if( overlay != 0 && numDetections > 0 )
@@ -622,7 +623,7 @@ bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint
 	// bounding box overlay
 	if( flags & OVERLAY_BOX )
 	{
-		if( CUDA_FAILED(cudaDetectionOverlay((float4*)input, (float4*)output, width, height, detections, numDetections, (float4*)mClassColors[1])) )
+		if( CUDA_FAILED(cudaDetectionOverlay((float4*)input, (float4*)output, width, height, detections, numDetections, (float4*)TRTClassColors[1])) )
 			return false;
 	}
 	
@@ -634,7 +635,7 @@ bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint
 // SetClassColor
 void ObjectDetection::SetClassColor( uint32_t classIndex, float r, float g, float b, float a )
 {
-	if( classIndex >= GetNumClasses() || !mClassColors[0] )
+	if( classIndex >= GetNumClasses() || !TRTClassColors[0] )
 		return;
 	
 	const uint32_t i = classIndex * 4;
