@@ -34,7 +34,7 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
-
+#include "nvidia_files/img_write.h"
 #include "../inference/ObjectDetection.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
 
@@ -64,7 +64,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu& msg )
 {
 	// convert the image to reside on GPU
-	if( !cvt || !cvt->Convert(input) ), 
+	if( !cvt || !cvt->Convert(input) )
 	{
 		ROS_INFO("failed to convert %ux%u %s image", input->width, input->height, input->encoding.c_str());
 		return;	
@@ -126,15 +126,15 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 
 		if( numDetections > 3 )
 		{
-			if( !saveImageRGBA("file.jpg", (float4*)imgCPU, imgWidth, imgHeight, 255.0f) )
-				printf("detectnet-console:  failed saving %ix%i image to '%s'\n", imgWidth, imgHeight, outputFilename);
+			if( !saveImageRGBA("file.jpg", (float4*)cvt->imgCPU(), cvt->GetWidth(), cvt->GetHeight(), 255.0f) )
+				printf("failed saving %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
 			else	
-				printf("detectnet-console:  successfully wrote %ix%i image to '%s'\n", imgWidth, imgHeight, outputFilename);
+				printf("successfully wrote %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
 		}
 		// publish the detection message
 		detection_pub->publish(msg);
 	}
-	
+
 	int time2_secs = input.header.stamp.sec;
     int time2_nsecs = input.header.stamp.nsec;
     double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
