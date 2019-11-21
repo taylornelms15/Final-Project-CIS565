@@ -5,7 +5,7 @@
 
 
 template<typename T>
-__global__ void gpuDetectionOverlay( T* input, T* output, int width, int height, Objectdetection::Detection* detections, int numDetections, float4* colors ) 
+__global__ void gpuDetectionOverlay( T* input, T* output, int width, int height, ObjectDetection::Detection* detections, int numDetections, float4* colors ) 
 {
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -67,7 +67,7 @@ __global__ void gpuDetectionOverlayBox( T* input, T* output, int imgWidth, int i
 					    px_in.w );
 }
 
-cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, detectNet::Detection* detections, int numDetections, float4* colors )
+cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, ObjectDetection::Detection* detections, int numDetections, float4* colors )
 {
 	if( !input || !output || width == 0 || height == 0 || !detections || numDetections == 0 || !colors )
 		return cudaErrorInvalidValue;

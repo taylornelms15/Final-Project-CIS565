@@ -139,7 +139,7 @@ public:
 						const char* input, const Dims3& inputDims, 
 						const char* output, const char* numDetections,
 						uint32_t maxBatchSize, precisionType precision,
-				   		deviceType device, bool allowGPUFallback )
+				   		deviceType device, bool allowGPUFallback );
 
 	/**
 	 * Load a new network instance by parsing the command line.
