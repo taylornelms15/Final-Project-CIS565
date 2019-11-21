@@ -133,6 +133,13 @@ public:
 	 */
 	static uint32_t OverlayFlagsFromStr( const char* flags );
 
+	static ObjectDetection* CreateModel( NetworkType networkType);
+
+	static ObjectDetection* CreateUFF( const char* model, const char* class_labels, float threshold, 
+						const char* input, const Dims3& inputDims, 
+						const char* output, const char* numDetections,
+						uint32_t maxBatchSize, precisionType precision,
+				   		deviceType device, bool allowGPUFallback )
 
 	/**
 	 * Load a new network instance by parsing the command line.

@@ -64,7 +64,7 @@ ObjectDetection::~ObjectDetection()
 
 
 // Create (UFF)
-static ObjectDetection* CreateUFF( const char* model, const char* class_labels, float threshold, 
+static ObjectDetection::ObjectDetection* CreateUFF( const char* model, const char* class_labels, float threshold, 
 						const char* input, const Dims3& inputDims, 
 						const char* output, const char* numDetections,
 						uint32_t maxBatchSize, precisionType precision,
@@ -128,7 +128,7 @@ static ObjectDetection* CreateUFF( const char* model, const char* class_labels, 
 
 
 // These are all pre trained models I have. Will get more for testing
-static ObjectDetection* CreateModel( NetworkType networkType)
+static ObjectDetection::ObjectDetection* CreateModel( NetworkType networkType)
 {
 	// for now we make this default values later we can maybe do some CLI
 	precisionType precision = TYPE_FASTEST;
@@ -150,7 +150,7 @@ static ObjectDetection* CreateModel( NetworkType networkType)
 
 
 // NetworkTypeFromStr
-ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelName )
+static ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelName )
 {
 	if( !modelName )
 		return ObjectDetection::ERROR;
