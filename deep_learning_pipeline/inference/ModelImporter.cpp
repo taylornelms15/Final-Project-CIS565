@@ -250,14 +250,6 @@ ModelImporter::~ModelImporter()
 }
 
 
-// EnableProfiler
-// void tensorNet::EnableLayerProfiler()
-// {
-// 	mEnableProfiler = true;
-
-// 	if( mContext != NULL )
-// 		mContext->setProfiler(&gProfiler);
-// }
 
 
 // EnableDebug
@@ -645,7 +637,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	TRTCacheCalibrationPath = cache_path;
 	
 	sprintf(cache_path, "%s.engine", cache_prefix);
-	mCacheEnginePath = cache_path;	
+	TRTCacheEnginePath = cache_path;	
 	printf(LOG_TRT "attempting to open engine cache file %s\n", TRTCacheEnginePath.c_str());
 	
 	std::ifstream cache( TRTCacheEnginePath );
@@ -747,11 +739,6 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 		printf(LOG_TRT "device %s, enabling context debug sync.\n", deviceTypeToStr(device));
 		context->setDebugSync(true);
 	}
-
-	// set our profiler
-	// TODO what does a profiler do...
-	if( TRTEnableProfiler )
-		context->setProfiler(&gProfiler);
 
 	printf(LOG_TRT "device %s, CUDA engine context initialized with %u bindings\n", deviceTypeToStr(device), engine->getNbBindings());
 	
@@ -863,7 +850,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 
 
 		l.name = output_blobs[n];
-		mOutputs.push_back(l);
+		TRTOutputs.push_back(l);
 	}
 	
 
