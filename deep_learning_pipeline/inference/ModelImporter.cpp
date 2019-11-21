@@ -315,7 +315,7 @@ std::vector<precisionType> ModelImporter::DetectNativePrecisions( deviceType dev
 	return types;
 }
 
-static bool ModelImporter::ContainsPrecision( const std::vector<precisionType>& types, precisionType type )
+static bool ContainsPrecision( const std::vector<precisionType>& types, precisionType type )
 {
 	const uint32_t numTypes = types.size();
 

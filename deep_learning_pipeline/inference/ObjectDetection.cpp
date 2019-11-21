@@ -2,7 +2,7 @@
  
 #include "ObjectDetection.h"
 #include "../cuda_utilities/imageNet.cuh"
-#include "../cuda_utilities/DetectNet.cuh"
+#include "../cuda_utilities/detectNet.cuh"
 
 #include "../cuda_utilities/cudaMappedMemory.h"
 // dont think ill need this
