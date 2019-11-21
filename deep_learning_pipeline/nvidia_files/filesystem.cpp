@@ -60,6 +60,7 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 
 	locations.push_back("images/");
 	locations.push_back("/usr/local/bin/images/");
+	locations.push_back("~/CIS565/droneMoM/src/FinalProjectCIS565/ros_deep_learning/");
 
 	// check each location until the file is found
 	const size_t numLocations = locations.size();
@@ -76,50 +77,6 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 }
 
 
-// listDir (TODO: migrate this from Qt to stat)
-#if 0
-bool listDir( const char* path, std::vector<std::string>& output, bool includePath )
-{
-	if( !path )
-		return false;
-
-	// get the list of files in the directory
-	QDir qDir(path);	
-	QStringList list = qDir.entryList();
-
-	if( list.size() == 0 )
-	{
-		printf("%s is empty or does not exist.\n", path);
-		return false;
-	}
-
-	for( int i=0; i < list.size(); ++i )
-	{
-		if( list.at(i) == "." || list.at(i) == ".." )
-			continue;
-
-		if( includePath )
-			output.push_back( qDir.filePath(list.at(i)).toLocal8Bit().constData() );
-		else
-			output.push_back( list.at(i).toLocal8Bit().constData() );
-	}
-
-	std::sort(output.begin(), output.end());
-
-	if( output.size() == 0 )
-	{
-		printf("%s is empty or does not exist.\n", path);
-		return false;
-	}
-
-	/*for( int i=0; i < output.size(); ++i )
-	{
-		printf("%06i  %s\n", i, output[i].c_str());
-	}*/
-
-	return true;
-}
-#endif
 
 // fileExists
 bool fileExists( const char* path, bool regularFilesOnly )

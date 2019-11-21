@@ -22,12 +22,16 @@
 
 #include <ros/ros.h>
 
+/*
+* ROS messages
+*/
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
+
 #include "../inference/ObjectDetection.h"
-#include <jetson-utils/cudaMappedMemory.h>
+#include "../cuda_utilities/cudaMappedMemory.h"
 
 #include "image_converter.h"
 
@@ -64,7 +68,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	// classify the image
 	ObjectDetection::Detection* detections = NULL;
 
-	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, ObjectDetection::OVERLAY_NONE);
+	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, ObjectDetection::OVERLAY_BOX);
 
 	// verify success	
 	if( numDetections < 0 )
