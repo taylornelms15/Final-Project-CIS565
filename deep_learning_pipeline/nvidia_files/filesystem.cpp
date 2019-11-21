@@ -32,6 +32,7 @@
 std::string absolutePath( const std::string& relative_path )
 {
 	const std::string proc = Process::ExecutableDirectory();
+	std::cout << "file " << proc << ": " proce + relative_path << std::endl;
 	return proc + relative_path;
 }
 

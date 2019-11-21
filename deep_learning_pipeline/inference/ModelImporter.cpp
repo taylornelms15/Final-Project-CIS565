@@ -646,7 +646,6 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	if( !cache )
 	{
 		printf(LOG_TRT "cache file not found, profiling network model on device %s\n", deviceTypeToStr(device));
-	
 		if( model_path.size() == 0 )
 		{
 			printf("\nerror:  model file '%s' was not found.\n", model_path_);
