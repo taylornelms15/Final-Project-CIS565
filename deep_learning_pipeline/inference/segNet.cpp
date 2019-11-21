@@ -81,20 +81,6 @@ segNet::NetworkType segNet::NetworkTypeFromStr( const char* modelName )
 	segNet::NetworkType type = segNet::FCN_RESNET18_VOC_320x320;
 
 	// ONNX models
-	if( strcasecmp(modelName, "fcn-resnet18-cityscapes-512x256") == 0 || strcasecmp(modelName, "fcn-resnet18-cityscapes") == 0 )
-		type = segNet::FCN_RESNET18_CITYSCAPES_512x256;
-	else if( strcasecmp(modelName, "fcn-resnet18-cityscapes-1024x512") == 0 )
-		type = segNet::FCN_RESNET18_CITYSCAPES_1024x512;
-	else if( strcasecmp(modelName, "fcn-resnet18-cityscapes-2048x1024") == 0 )
-		type = segNet::FCN_RESNET18_CITYSCAPES_2048x1024;
-	else if( strcasecmp(modelName, "fcn-resnet18-deepscene-576x320") == 0 || strcasecmp(modelName, "fcn-resnet18-deepscene") == 0)
-		type = segNet::FCN_RESNET18_DEEPSCENE_576x320;
-	else if( strcasecmp(modelName, "fcn-resnet18-deepscene-864x480") == 0 )
-		type = segNet::FCN_RESNET18_DEEPSCENE_864x480;
-	else if( strcasecmp(modelName, "fcn-resnet18-mhp-512x320") == 0 || strcasecmp(modelName, "fcn-resnet18-mhp") == 0 )
-		type = segNet::FCN_RESNET18_MHP_512x320;
-	else if( strcasecmp(modelName, "fcn-resnet18-mhp-640x360") == 0 )
-		type = segNet::FCN_RESNET18_MHP_640x360;
 	else if( strcasecmp(modelName, "fcn-resnet18-voc-320x320") == 0 || strcasecmp(modelName, "fcn-resnet18-pascal-voc-320x320") == 0 || strcasecmp(modelName, "fcn-resnet18-voc") == 0 || strcasecmp(modelName, "fcn-resnet18-pascal-voc") == 0 )
 		type = segNet::FCN_RESNET18_VOC_320x320;
 	else if( strcasecmp(modelName, "fcn-resnet18-voc-512x320") == 0 || strcasecmp(modelName, "fcn-resnet18-pascal-voc-512x320") == 0 )
@@ -103,25 +89,8 @@ segNet::NetworkType segNet::NetworkTypeFromStr( const char* modelName )
 		type = segNet::FCN_RESNET18_SUNRGB_512x400;
 	else if( strcasecmp(modelName, "fcn-resnet18-sun-640x512") == 0 || strcasecmp(modelName, "fcn-resnet18-sun-rgbd-640x512") == 0 )
 		type = segNet::FCN_RESNET18_SUNRGB_640x512;
-
-	// legacy models
-	else if( strcasecmp(modelName, "fcn-alexnet-cityscapes-sd") == 0 || strcasecmp(modelName, "fcn-alexnet-cityscapes") == 0 )
-		type = segNet::FCN_ALEXNET_CITYSCAPES_SD;
-	else if( strcasecmp(modelName, "fcn-alexnet-cityscapes-hd") == 0 )
-		type = segNet::FCN_ALEXNET_CITYSCAPES_HD;
-	else if( strcasecmp(modelName, "fcn-alexnet-pascal-voc") == 0 )
-		type = segNet::FCN_ALEXNET_PASCAL_VOC;
-	else if( strcasecmp(modelName, "synthia-cvpr16") == 0 || strcasecmp(modelName, "fcn-alexnet-synthia-cvpr16") == 0 )
-		type = segNet::FCN_ALEXNET_SYNTHIA_CVPR16;
-	else if( strcasecmp(modelName, "synthia-summer-sd") == 0 || strcasecmp(modelName, "fcn-alexnet-synthia-summer-sd") == 0 )
-		type = segNet::FCN_ALEXNET_SYNTHIA_SUMMER_SD;
-	else if( strcasecmp(modelName, "synthia-summer-hd") == 0 || strcasecmp(modelName, "fcn-alexnet-synthia-summer-hd") == 0 )
-		type = segNet::FCN_ALEXNET_SYNTHIA_SUMMER_HD;
-	else if( strcasecmp(modelName, "aerial-fpv") == 0 || strcasecmp(modelName, "aerial-fpv-720p") == 0 || strcasecmp(modelName, "fcn-alexnet-aerial-fpv-720p") == 0 )
-		type = segNet::FCN_ALEXNET_AERIAL_FPV_720p;
 	else
-		type = segNet::SEGNET_CUSTOM;
-
+		type = segNet::ERROR;
 	return type;
 }
 
@@ -132,27 +101,12 @@ const char* segNet::NetworkTypeToStr( segNet::NetworkType type )
 	switch(type)
 	{
 		// ONNX models
-		case FCN_RESNET18_CITYSCAPES_512x256:	return "fcn-resnet18-cityscapes-512x256";
-		case FCN_RESNET18_CITYSCAPES_1024x512:	return "fcn-resnet18-cityscapes-1024x512";
-		case FCN_RESNET18_CITYSCAPES_2048x1024:	return "fcn-resnet18-cityscapes-2048x1024";
-		case FCN_RESNET18_DEEPSCENE_576x320:	return "fcn-resnet18-deepscene-576x320";
-		case FCN_RESNET18_DEEPSCENE_864x480:	return "fcn-resnet18-deepscene-864x480";
-		case FCN_RESNET18_MHP_512x320:		return "fcn-resnet18-mhp-512x320";
-		case FCN_RESNET18_MHP_640x360:		return "fcn-resnet18-mhp-640x360";
 		case FCN_RESNET18_VOC_320x320:		return "fcn-resnet18-voc-320x320";
 		case FCN_RESNET18_VOC_512x320:		return "fcn-resnet18-voc-512x320";
 		case FCN_RESNET18_SUNRGB_512x400:		return "fcn-resnet18-sun-512x400";
 		case FCN_RESNET18_SUNRGB_640x512:		return "fcn-resnet18-sun-640x512";
 
-		// legacy models
-		case FCN_ALEXNET_PASCAL_VOC:			return "fcn-alexnet-pascal-voc";
-		case FCN_ALEXNET_SYNTHIA_CVPR16:		return "fcn-alexnet-synthia-cvpr16";
-		case FCN_ALEXNET_SYNTHIA_SUMMER_HD:	return "fcn-alexnet-synthia-summer-hd";
-		case FCN_ALEXNET_SYNTHIA_SUMMER_SD:	return "fcn-alexnet-synthia-summer-sd";
-		case FCN_ALEXNET_CITYSCAPES_HD:		return "fcn-alexnet-cityscapes-hd";
-		case FCN_ALEXNET_CITYSCAPES_SD:		return "fcn-alexnet-cityscapes-sd";
-		case FCN_ALEXNET_AERIAL_FPV_720p:		return "fcn-alexnet-aerial-fpv-720p";
-		default:							return "custom segNet";
+		default:							return "ERROR";
 	}
 }
 
