@@ -1,5 +1,5 @@
 
-#include "detectNet.h"
+#include "../inference/ObjectDetection.h"
 #include "cudaUtility.h"
 
 
@@ -21,7 +21,7 @@ __global__ void gpuDetectionOverlay( T* input, T* output, int width, int height,
 	
 	for( int n=0; n < numDetections; n++ )
 	{
-		const detectNet::Detection det = detections[n];
+		const ObjectDetection::Detection det = detections[n];
 
 		// check if this pixel is inside the bounding box
 		if( fx >= det.Left && fx <= det.Right && fy >= det.Top && fy <= det.Bottom )
