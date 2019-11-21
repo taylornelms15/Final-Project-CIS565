@@ -57,13 +57,13 @@ ObjectDetection::~ObjectDetection()
 		CUDA(cudaFreeHost(TRTClassColors[HOST]));
 		
 		TRTClassColors[HOST] = NULL;
-		TRTClassColors[DEVICEw] = NULL;
+		TRTClassColors[DEVICE] = NULL;
 	}
 }
 
 
 // Create (UFF)
-static detectNet* ObjectDetection::CreateUFF( const char* model, const char* class_labels, float threshold, 
+static ObjectDetection* ObjectDetection::CreateUFF( const char* model, const char* class_labels, float threshold, 
 						const char* input, const Dims3& inputDims, 
 						const char* output, const char* numDetections,
 						uint32_t maxBatchSize, precisionType precision,
@@ -127,7 +127,7 @@ static detectNet* ObjectDetection::CreateUFF( const char* model, const char* cla
 
 
 // These are all pre trained models I have. Will get more for testing
-static detectNet* ObjectDetection::CreateModel( NetworkType networkType)
+static ObjectDetection* ObjectDetection::CreateModel( NetworkType networkType)
 {
 	// for now we make this default values later we can maybe do some CLI
 	precisionType precision = TYPE_FASTEST;
@@ -152,25 +152,25 @@ static detectNet* ObjectDetection::CreateModel( NetworkType networkType)
 ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* modelName )
 {
 	if( !modelName )
-		return detectNet::ERROR;
+		return ObjectDetection::ERROR;
 
 	ObjectDetection::NetworkType type = ObjectDetection::ERROR;
 
 	else if( strcasecmp(modelName, "ssd-inception") == 0 )
-		type = detectNet::SSD_INCEPTION_V2;
+		type = ObjectDetection::SSD_INCEPTION_V2;
 	else if( strcasecmp(modelName, "ssd-mobilenet-v1") == 0 )
-		type = detectNet::SSD_MOBILENET_V1;
+		type = ObjectDetection::SSD_MOBILENET_V1;
 	else if( strcasecmp(modelName, "ssd-mobilenet-v2") == 0 )
-		type = detectNet::SSD_MOBILENET_V2;
+		type = ObjectDetection::SSD_MOBILENET_V2;
 
 	return type;
 }
 
 
 // Create
-ObjectDetection* ObjectDetection::Create( ObjectDetection::NetworkType model )
+ObjectDetection* ObjectDetection::Create( NetworkType model )
 {
-	ObjectDetection* net = new detectNet();
+	ObjectDetection* net = new ObjectDetection();
 	
 	if( !net )
 		return NULL;
@@ -189,29 +189,29 @@ bool ObjectDetection::allocDetections()
 	// TODO FIX THIS OR W/e CAN NOT USE ONNX
 	if( IsModelType(MODEL_UFF) )
 	{
-		printf("W = %u  H = %u  C = %u\n", DIMS_W(mOutputs[OUTPUT_UFF].dims), DIMS_H(mOutputs[OUTPUT_UFF].dims), DIMS_C(mOutputs[OUTPUT_UFF].dims));
-		mMaxDetections = DIMS_H(mOutputs[OUTPUT_UFF].dims) * DIMS_C(mOutputs[OUTPUT_UFF].dims);
+		printf("W = %u  H = %u  C = %u\n", DIMS_W(TRTOutputs[OUTPUT_UFF].dims), DIMS_H(TRTOutputs[OUTPUT_UFF].dims), DIMS_C(TRTOutputs[OUTPUT_UFF].dims));
+		TRTMaxDetections = DIMS_H(TRTOutputs[OUTPUT_UFF].dims) * DIMS_C(TRTOutputs[OUTPUT_UFF].dims);
 	}
 	else if( IsModelType(MODEL_ONNX) )
 	{
-		mMaxDetections = 1;
-		mNumClasses = 1;
+		TRTMaxDetections = 1;
+		TRTNumClasses = 1;
 		printf("detectNet -- using ONNX model\n");
 	}
-	else if{
-		assert(0);
+	else{
+		assert(IsModelType(MODEL_ONNX));
 	}
 
-	printf("detectNet -- maximum bounding boxes:  %u\n", mMaxDetections);
+	printf("detectNet -- maximum bounding boxes:  %u\n", TRTMaxDetections);
 
 	// allocate array to store detection results
-	const size_t det_size = sizeof(Detection) * mNumDetectionSets * mMaxDetections;
+	const size_t det_size = sizeof(Detection) * TRTNumDetectionSets * TRTMaxDetections;
 	
 	// allocate shared memory
-	if( !cudaAllocMapped((void**)&mDetectionSets[HOST], (void**)&mDetectionSets[DEVICE], det_size) )
+	if( !cudaAllocMapped((void**)&TRTDetectionSets[HOST], (void**)&TRTDetectionSets[DEVICE], det_size) )
 		return false;
 	
-	memset(mDetectionSets[HOST], 0, det_size);
+	memset(TRTDetectionSets[HOST], 0, det_size);
 	return true;
 }
 
@@ -222,7 +222,7 @@ bool ObjectDetection::defaultColors()
 {
 	const uint32_t numClasses = GetNumClasses();
 	
-	if( !cudaAllocMapped((void**)&mClassColors[HOST], (void**)&mClassColors[DEVICE], numClasses * sizeof(float4)) )
+	if( !cudaAllocMapped((void**)&TRTClassColors[HOST], (void**)&TRTClassColors[DEVICE], numClasses * sizeof(float4)) )
 		return false;
 
 	// if there are a large number of classes (MS COCO)
@@ -247,10 +247,10 @@ bool ObjectDetection::defaultColors()
 				c = c >> 3;
 			}
 
-			mClassColors[0][i*4+0] = r;
-			mClassColors[0][i*4+1] = g;
-			mClassColors[0][i*4+2] = b;
-			mClassColors[0][i*4+3] = DETECTNET_DEFAULT_ALPHA; 
+			TRTClassColors[0][i*4+0] = r;
+			TRTClassColors[0][i*4+1] = g;
+			TRTClassColors[0][i*4+2] = b;
+			TRTClassColors[0][i*4+3] = DETECTNET_DEFAULT_ALPHA; 
 
 			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)alpha);
 		}
@@ -262,17 +262,17 @@ bool ObjectDetection::defaultColors()
 		{
 			if( n != 1 )
 			{
-				mClassColors[0][n*4+0] = 0.0f;	// r
-				mClassColors[0][n*4+1] = 200.0f;	// g
-				mClassColors[0][n*4+2] = 255.0f;	// b
-				mClassColors[0][n*4+3] = DETECTNET_DEFAULT_ALPHA;	// a
+				TRTClassColors[0][n*4+0] = 0.0f;	// r
+				TRTClassColors[0][n*4+1] = 200.0f;	// g
+				TRTClassColors[0][n*4+2] = 255.0f;	// b
+				TRTClassColors[0][n*4+3] = DETECTNET_DEFAULT_ALPHA;	// a
 			}
 			else
 			{
-				mClassColors[0][n*4+0] = 0.0f;	// r
-				mClassColors[0][n*4+1] = 255.0f;	// g
-				mClassColors[0][n*4+2] = 175.0f;	// b
-				mClassColors[0][n*4+3] = 75.0f;	// a
+				TRTClassColors[0][n*4+0] = 0.0f;	// r
+				TRTClassColors[0][n*4+1] = 255.0f;	// g
+				TRTClassColors[0][n*4+2] = 175.0f;	// b
+				TRTClassColors[0][n*4+3] = 75.0f;	// a
 			}
 		}
 	}
@@ -289,18 +289,18 @@ void ObjectDetection::defaultClassDesc()
 	printf(LOG_TRT "number of classes %d\n",numClasses);
 
 	// assign defaults to classes that have no info
-	for( uint32_t n=mClassDesc.size(); n < numClasses; n++ )
+	for( uint32_t n=TRTClassDesc.size(); n < numClasses; n++ )
 	{
 		char syn_str[10];
-		sprintf(syn_str, "n%08u", mCustomClasses);
+		sprintf(syn_str, "n%08u", TRTCustomClasses);
 		printf(LOG_TRT "default classes %d\n",n);
 		char desc_str[16];
-		sprintf(desc_str, "class #%u", mCustomClasses);
+		sprintf(desc_str, "class #%u", TRTCustomClasses);
 
-		mClassSynset.push_back(syn_str);
-		mClassDesc.push_back(desc_str);
+		TRTClassSynset.push_back(syn_str);
+		TRTClassDesc.push_back(desc_str);
 
-		mCustomClasses++;
+		TRTCustomClasses++;
 	}
 }
 
@@ -350,37 +350,37 @@ bool ObjectDetection::loadClassDesc( const char* filename )
 	
 			//printf("a=%s b=%s\n", a.c_str(), b.c_str());
 
-			mClassSynset.push_back(a);
-			mClassDesc.push_back(b);
+			TRTClassSynset.push_back(a);
+			TRTClassDesc.push_back(b);
 		}
 		else if( len > 0 )	// no 9-character synset prefix (i.e. from DIGITS snapshot)
 		{
 			char a[10];
-			sprintf(a, "n%08u", mCustomClasses);
+			sprintf(a, "n%08u", TRTCustomClasses);
 
 			//printf("a=%s b=%s (custom non-synset)\n", a, str);
-			mCustomClasses++;
+			TRTCustomClasses++;
 
 			if( str[len-1] == '\n' )
 				str[len-1] = 0;
 
-			mClassSynset.push_back(a);
-			mClassDesc.push_back(str);
+			TRTClassSynset.push_back(a);
+			TRTClassDesc.push_back(str);
 		}
 	}
 	
 	fclose(f);
 	
-	printf("detectNet -- loaded %zu class info entries\n", mClassDesc.size());
+	printf("detectNet -- loaded %zu class info entries\n", TRTClassDesc.size());
 	
-	if( mClassDesc.size() == 0 )
+	if( TRTClassDesc.size() == 0 )
 		return false;
 
 	if( IsModelType(MODEL_UFF) )
-		mNumClasses = mClassDesc.size();
+		TRTNumClasses = TRTClassDesc.size();
 
-	printf("detectNet -- number of object classes:  %u\n", mNumClasses);
-	mClassPath = path;	
+	printf("detectNet -- number of object classes:  %u\n", TRTNumClasses);
+	TRTClassPath = path;	
 	return true;
 }
 
@@ -389,15 +389,15 @@ bool ObjectDetection::loadClassDesc( const char* filename )
 // Detect
 int ObjectDetection::Detect( float* input, uint32_t width, uint32_t height, Detection** detections, uint32_t overlay )
 {
-	Detection* det = mDetectionSets[HOST] + mDetectionSet * GetMaxDetections();
+	Detection* det = TRTDetectionSets[HOST] + TRTDetectionSet * GetMaxDetections();
 
 	if( detections != NULL )
 		*detections = det;
 
-	mDetectionSet++;
+	TRTDetectionSet++;
 
-	if( mDetectionSet >= mNumDetectionSets )
-		mDetectionSet = 0;
+	if( TRTDetectionSet >= mNumDetectionSets )
+		TRTDetectionSet = 0;
 	
 	return Detect(input, width, height, det, overlay);
 }
@@ -467,15 +467,15 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 
 	if( IsModelType(MODEL_UFF) )
 	{		
-		const int rawDetections = *(int*)mOutputs[OUTPUT_NUM].CPU;
-		const int rawParameters = DIMS_W(mOutputs[OUTPUT_UFF].dims);
+		const int rawDetections = *(int*)TRTOutputs[OUTPUT_NUM].CPU;
+		const int rawParameters = DIMS_W(TRTOutputs[OUTPUT_UFF].dims);
 
 		// filter the raw detections by thresholding the confidence
 		for( int n=0; n < rawDetections; n++ )
 		{
-			float* object_data = mOutputs[OUTPUT_UFF].CPU + n * rawParameters;
+			float* object_data = TRTOutputs[OUTPUT_UFF].CPU + n * rawParameters;
 
-			if( object_data[2] < mCoverageThreshold )
+			if( object_data[2] < TRTCoverageThreshold )
 				continue;
 
 			detections[numDetections].Instance   = numDetections; //(uint32_t)object_data[0];
@@ -503,7 +503,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	}
 	else if( IsModelType(MODEL_ONNX) )
 	{
-		float* coord = mOutputs[0].CPU;
+		float* coord = TRTOutputs[0].CPU;
 
 		coord[0] = ((coord[0] + 1.0f) * 0.5f) * float(width);
 		coord[1] = ((coord[1] + 1.0f) * 0.5f) * float(height);
@@ -639,10 +639,10 @@ void ObjectDetection::SetClassColor( uint32_t classIndex, float r, float g, floa
 	
 	const uint32_t i = classIndex * 4;
 	
-	mClassColors[HOST][i+0] = r;
-	mClassColors[HOST][i+1] = g;
-	mClassColors[HOST][i+2] = b;
-	mClassColors[HOST][i+3] = a;
+	TRTClassColors[HOST][i+0] = r;
+	TRTClassColors[HOST][i+1] = g;
+	TRTClassColors[HOST][i+2] = b;
+	TRTClassColors[HOST][i+3] = a;
 }
 
 
@@ -652,5 +652,5 @@ void ObjectDetection::SetOverlayAlpha( float alpha )
 	const uint32_t numClasses = GetNumClasses();
 
 	for( uint32_t n=0; n < numClasses; n++ )
-		mClassColors[HOST][n*4+3] = alpha;
+		TRTClassColors[HOST][n*4+3] = alpha;
 }
