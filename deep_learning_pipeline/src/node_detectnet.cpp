@@ -25,6 +25,11 @@
 /*
 * ROS messages
 */
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+
+#include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
@@ -56,10 +61,10 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input )
+void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu& msg )
 {
 	// convert the image to reside on GPU
-	if( !cvt || !cvt->Convert(input) )
+	if( !cvt || !cvt->Convert(input) ), 
 	{
 		ROS_INFO("failed to convert %ux%u %s image", input->width, input->height, input->encoding.c_str());
 		return;	
@@ -106,6 +111,9 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
+			// 
+			//detMsg.source_img = input;
+
 			// create classification hypothesis
 			vision_msgs::ObjectHypothesisWithPose hyp;
 			
@@ -116,9 +124,32 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 			msg.detections.push_back(detMsg);
 		}
 
+		if( numDetections > 3 )
+		{
+			if( !saveImageRGBA("file.jpg", (float4*)imgCPU, imgWidth, imgHeight, 255.0f) )
+				printf("detectnet-console:  failed saving %ix%i image to '%s'\n", imgWidth, imgHeight, outputFilename);
+			else	
+				printf("detectnet-console:  successfully wrote %ix%i image to '%s'\n", imgWidth, imgHeight, outputFilename);
+		}
 		// publish the detection message
 		detection_pub->publish(msg);
 	}
+	
+	int time2_secs = input.header.stamp.sec;
+    int time2_nsecs = input.header.stamp.nsec;
+    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
+	ROS_INFO("===IMAGE %s===", input.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue2);
+	int time_secs = msg.header.stamp.sec;
+    int time_nsecs = msg.header.stamp.nsec;
+    double timeValue = time_secs + (1e-9 * time_nsecs);
+	ROS_INFO("===IMU %s===", msg.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue);
+    ROS_INFO("orientation X: %9.6f", msg.orientation_covariance[0]);
+    ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
+    ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
+    ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
+
 }
 
 
@@ -153,7 +184,7 @@ int main(int argc, char **argv)
 	// 
 	if( model == ObjectDetection::ERROR )
 	{
-		ROS_ERROR("invalid built-in pretrained model name '%s', defaulting to pednet", model_name.c_str());
+		ROS_ERROR("unknown model\n");
 		return 0;
 	}
 
@@ -162,7 +193,7 @@ int main(int argc, char **argv)
 
 	if( !net )
 	{
-		ROS_ERROR("failed to load detectNet model");
+		ROS_ERROR("failed to load model exiting!\n");
 		return 0;
 	}
 
@@ -227,7 +258,14 @@ int main(int argc, char **argv)
 	 * subscribe to image topic
 	 */
 	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	// ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	// ros::Subscriber imu_sub = private_nh.subscribe("/image_publisher/image_raw", 5, imu_callback);
+	message_filters::Subscriber<Image> image_sub(private_nh, "/image_publisher/image_raw", 50);
+  	message_filters::Subscriber<Imu> info_sub(private_nh, "imu", 50);
+  	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
+  	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, info_sub);
+  	// TimeSynchronizer<Image, CameraInfo> sync(image_sub, info_sub, 10);
+  	sync.registerCallback(boost::bind(&img_callback, _1, _2));
 
 	/*
 	 * wait for messages

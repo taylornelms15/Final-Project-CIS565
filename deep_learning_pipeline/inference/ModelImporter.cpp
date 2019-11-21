@@ -285,12 +285,16 @@ std::vector<precisionType> ModelImporter::DetectNativePrecisions( deviceType dev
 	types.push_back(TYPE_FP32);
 
 	// detect fast (native) FP16
-	if( builder->platformHasFastFp16() )
+	if( builder->platformHasFastFp16() ){
 		types.push_back(TYPE_FP16);
+		printf(LOG_TRT "fp16 detected on platform");
+	}
 
 	// detect fast (native) INT8
-	if( builder->platformHasFastInt8() )
+	if( builder->platformHasFastInt8() ){
 		types.push_back(TYPE_INT8);
+		printf(LOG_TRT "int8 detected on platform");
+	}
 
 	// Now we have all of our supported types that we can run at
 	const uint32_t numTypes = types.size();
