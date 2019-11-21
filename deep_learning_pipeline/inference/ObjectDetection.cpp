@@ -1,12 +1,12 @@
 
  
 #include "ObjectDetection.h"
+
 #include "../cuda_utilities/imageNet.cuh"
 #include "../cuda_utilities/detectNet.cuh"
 
 #include "../cuda_utilities/cudaMappedMemory.h"
-// dont think ill need this
-#include "../cuda_utilities/cudaFont.h"
+#include "../cuda_utilities/cudaUtility.h"
 
 #include "../nvidia_files/commandLine.h"
 #include "../nvidia_files/filesystem.h"
@@ -419,7 +419,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	// This will likely be different for EVERY network 
 	if( IsModelType(MODEL_UFF) )
 	{
-		if( CUDA_FAILED(cudaPreImageNetNormBGR((float4*)rgba, width, height, mInputCUDA, mWidth, mHeight,
+		if( CUDA_FAILED(cudaPreImageNetNormBGR((float4*)rgba, width, height, TRTInputCUDA, TRTWidth, TRTHeight,
 										  make_float2(-1.0f, 1.0f), GetStream())) )
 		{
 			printf(LOG_TRT "detectNet::Detect() -- cudaPreImageNetNorm() failed\n");
@@ -429,7 +429,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	else if( IsModelType(MODEL_ONNX) )
 	{
 		// downsample, convert to band-sequential RGB, and apply pixel normalization, mean pixel subtraction and standard deviation
-		if( CUDA_FAILED(cudaPreImageNetNormMeanRGB((float4*)rgba, width, height, mInputCUDA, mWidth, mHeight, 
+		if( CUDA_FAILED(cudaPreImageNetNormMeanRGB((float4*)rgba, width, height, TRTInputCUDA, TRTWidth, TRTHeight, 
 										   make_float2(0.0f, 1.0f), 
 										   make_float3(0.485f, 0.456f, 0.406f),
 										   make_float3(0.229f, 0.224f, 0.225f), 
