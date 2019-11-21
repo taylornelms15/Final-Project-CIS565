@@ -1,7 +1,7 @@
 
  
 #ifndef __OBJECT_DETECTION_H__
-#define __OBJECT_DETECTION_H__s
+#define __OBJECT_DETECTION_H__
 
 
 #include "ModelImporter.h" 

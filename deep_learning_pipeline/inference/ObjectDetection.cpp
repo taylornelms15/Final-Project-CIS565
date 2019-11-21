@@ -70,7 +70,7 @@ static ObjectDetection* CreateUFF( const char* model, const char* class_labels, 
 						uint32_t maxBatchSize, precisionType precision,
 				   		deviceType device, bool allowGPUFallback )
 {
-	detectNet* net = new detectNet();
+	ObjectDetection* net = new detectNet();
 	
 	if( !net )
 		return NULL;
@@ -397,7 +397,7 @@ int ObjectDetection::Detect( float* input, uint32_t width, uint32_t height, Dete
 
 	TRTDetectionSet++;
 
-	if( TRTDetectionSet >= mNumDetectionSets )
+	if( TRTDetectionSet >= TRTNumDetectionSets )
 		TRTDetectionSet = 0;
 	
 	return Detect(input, width, height, det, overlay);
