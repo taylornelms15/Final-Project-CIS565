@@ -101,8 +101,6 @@ public:
 	{
 		OVERLAY_NONE       = 0,			/**< No overlay. */
 		OVERLAY_BOX        = (1 << 0),	/**< Overlay the object bounding boxes */
-		OVERLAY_LABEL 	    = (1 << 1),	/**< Overlay the class description labels */
-		OVERLAY_CONFIDENCE = (1 << 2),	/**< Overlay the detection confidence values */
 	};
 
 	/*
@@ -110,8 +108,8 @@ public:
 	*/ 
 	enum Ownership
 	{
-		HOST,
-		DEVICE
+		HOST=0,
+		DEVICE=1
 	};
 	
 	/**
@@ -244,13 +242,13 @@ protected:
 	std::vector<std::string> mClassDesc;
 	std::vector<std::string> mClassSynset;
 
-	std::string mClassPath;
-	uint32_t    mCustomClasses;
-	uint32_t	  mNumClasses;
+	std::string TRTClassPath;
+	uint32_t    TRTCustomClasses;
+	uint32_t	  TRTNumClasses;
 
-	Detection* mDetectionSets[2];	// list of detections, mNumDetectionSets * mMaxDetections
-	uint32_t   mDetectionSet;	// index of next detection set to use
-	uint32_t	 mMaxDetections;	// number of raw detections in the grid
+	Detection* TRTDetectionSets[2];	// list of detections, mNumDetectionSets * mMaxDetections
+	uint32_t   TRTDetectionSet;	// index of next detection set to use
+	uint32_t	 TRTMaxDetections;	// number of raw detections in the grid
 
 	static const uint32_t mNumDetectionSets = 16; // size of detection ringbuffer
 };

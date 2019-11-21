@@ -120,20 +120,6 @@ segNet* segNet::Create( NetworkType networkType, uint32_t maxBatchSize,
 	#define LOAD_ONNX(x) Create(NULL, "networks/" x "/fcn_resnet18.onnx", "networks/" x "/classes.txt", "networks/" x "/colors.txt", "input_0", "output_0", maxBatchSize, precision, device, allowGPUFallback )
 
 	// ONNX models
-	if( networkType == FCN_RESNET18_CITYSCAPES_512x256 )
-		net = LOAD_ONNX("FCN-ResNet18-Cityscapes-512x256");
-	else if( networkType == FCN_RESNET18_CITYSCAPES_1024x512 )
-		net = LOAD_ONNX("FCN-ResNet18-Cityscapes-1024x512");
-	else if( networkType == FCN_RESNET18_CITYSCAPES_2048x1024 )
-		net = LOAD_ONNX("FCN-ResNet18-Cityscapes-2048x1024");
-	else if( networkType == FCN_RESNET18_DEEPSCENE_576x320 )
-		net = LOAD_ONNX("FCN-ResNet18-DeepScene-576x320");
-	else if( networkType == FCN_RESNET18_DEEPSCENE_864x480 )
-		net = LOAD_ONNX("FCN-ResNet18-DeepScene-864x480");
-	else if( networkType == FCN_RESNET18_MHP_512x320 )
-		net = LOAD_ONNX("FCN-ResNet18-MHP-512x320");
-	else if( networkType == FCN_RESNET18_MHP_640x360 )
-		net = LOAD_ONNX("FCN-ResNet18-MHP-640x360");
 	else if( networkType == FCN_RESNET18_VOC_320x320 )
 		net = LOAD_ONNX("FCN-ResNet18-Pascal-VOC-320x320");
 	else if( networkType == FCN_RESNET18_VOC_512x320 )
@@ -144,22 +130,6 @@ segNet* segNet::Create( NetworkType networkType, uint32_t maxBatchSize,
 		net = LOAD_ONNX("FCN-ResNet18-SUN-RGBD-640x512");
 
 	// legacy models
-	else if( networkType == FCN_ALEXNET_PASCAL_VOC )
-		net = Create("networks/FCN-Alexnet-Pascal-VOC/deploy.prototxt", "networks/FCN-Alexnet-Pascal-VOC/snapshot_iter_146400.caffemodel", "networks/FCN-Alexnet-Pascal-VOC/pascal-voc-classes.txt", "networks/FCN-Alexnet-Pascal-VOC/pascal-voc-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );
-	else if( networkType == FCN_ALEXNET_SYNTHIA_CVPR16 )
-		net = Create("networks/FCN-Alexnet-SYNTHIA-CVPR16/deploy.prototxt", "networks/FCN-Alexnet-SYNTHIA-CVPR16/snapshot_iter_1206700.caffemodel", "networks/FCN-Alexnet-SYNTHIA-CVPR16/synthia-cvpr16-labels.txt", "networks/FCN-Alexnet-SYNTHIA-CVPR16/synthia-cvpr16-train-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );
-	else if( networkType == FCN_ALEXNET_SYNTHIA_SUMMER_HD )
-		net = Create("networks/FCN-Alexnet-SYNTHIA-Summer-HD/deploy.prototxt", "networks/FCN-Alexnet-SYNTHIA-Summer-HD/snapshot_iter_902888.caffemodel", "networks/FCN-Alexnet-SYNTHIA-Summer-HD/synthia-seq-labels.txt", "networks/FCN-Alexnet-SYNTHIA-Summer-HD/synthia-seq-train-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );	
-	else if( networkType == FCN_ALEXNET_SYNTHIA_SUMMER_SD )
-		net = Create("networks/FCN-Alexnet-SYNTHIA-Summer-SD/deploy.prototxt", "networks/FCN-Alexnet-SYNTHIA-Summer-SD/snapshot_iter_431816.caffemodel", "networks/FCN-Alexnet-SYNTHIA-Summer-SD/synthia-seq-labels.txt", "networks/FCN-Alexnet-SYNTHIA-Summer-SD/synthia-seq-train-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );		
-	else if( networkType == FCN_ALEXNET_CITYSCAPES_HD )
-		net = Create("networks/FCN-Alexnet-Cityscapes-HD/deploy.prototxt", "networks/FCN-Alexnet-Cityscapes-HD/snapshot_iter_367568.caffemodel", "networks/FCN-Alexnet-Cityscapes-HD/cityscapes-labels.txt", "networks/FCN-Alexnet-Cityscapes-HD/cityscapes-deploy-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );	
-	else if( networkType == FCN_ALEXNET_CITYSCAPES_SD )
-		net = Create("networks/FCN-Alexnet-Cityscapes-SD/deploy.prototxt", "networks/FCN-Alexnet-Cityscapes-SD/snapshot_iter_2756640.caffemodel", "networks/FCN-Alexnet-Cityscapes-SD/cityscapes-labels.txt", "networks/FCN-Alexnet-Cityscapes-SD/cityscapes-deploy-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );		
-	//else if( networkType == FCN_ALEXNET_AERIAL_FPV_720p_4ch )
-	//	net = Create("FCN-Alexnet-Aerial-FPV-4ch-720p/deploy.prototxt", "FCN-Alexnet-Aerial-FPV-4ch-720p/snapshot_iter_1777146.caffemodel", "FCN-Alexnet-Aerial-FPV-4ch-720p/fpv-labels.txt", "FCN-Alexnet-Aerial-FPV-4ch-720p/fpv-deploy-colors.txt", "data", "score_fr_4classes", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize );			
-	else if( networkType == FCN_ALEXNET_AERIAL_FPV_720p )
-		net = Create("networks/FCN-Alexnet-Aerial-FPV-720p/fcn_alexnet.deploy.prototxt", "networks/FCN-Alexnet-Aerial-FPV-720p/snapshot_iter_10280.caffemodel", "networks/FCN-Alexnet-Aerial-FPV-720p/fpv-labels.txt", "networks/FCN-Alexnet-Aerial-FPV-720p/fpv-deploy-colors.txt", SEGNET_DEFAULT_INPUT, SEGNET_DEFAULT_OUTPUT, maxBatchSize, precision, device, allowGPUFallback );		
 	else
 		return NULL;
 

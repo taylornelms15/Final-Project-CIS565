@@ -1,13 +1,14 @@
 
  
 #include "ObjectDetection.h"
-#include "imageNet.cuh"
+#include "../cuda_utilities/imageNet.cuh"
 
-#include "cudaMappedMemory.h"
+#include "../cuda_utilities/cudaMappedMemory.h"
+// dont think ill need this
 #include "cudaFont.h"
 
-#include "commandLine.h"
-#include "filesystem.h"
+#include "../nvidida_files/commandLine.h"
+#include "../nividia_files/filesystem.h"
 
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map
@@ -23,40 +24,40 @@
 // constructor
 ObjectDetection::ObjectDetection( float meanPixel ) : ModelImporter()
 {
-	mCoverageThreshold = DETECTNET_DEFAULT_THRESHOLD;
-	mMeanPixel         = meanPixel;
-	mCustomClasses     = 0;
-	mNumClasses        = 0;
+	TRTCoverageThreshold = DETECTNET_DEFAULT_THRESHOLD;
+	TRTMeanPixel         = meanPixel;
+	TRTCustomClasses     = 0;
+	TRTNumClasses        = 0;
 
-	mClassColors[HOST]   = NULL; // cpu ptr
-	mClassColors[DEVICE]   = NULL; // gpu ptr
+	TRTClassColors[HOST]   = NULL; // cpu ptr
+	TRTClassColors[DEVICE]   = NULL; // gpu ptr
 	
-	mDetectionSets[HOST] = NULL; // cpu ptr
-	mDetectionSets[DEVICE] = NULL; // gpu ptr
-	mDetectionSet     = 0;
-	mMaxDetections    = 0;
+	TRTDetectionSets[HOST] = NULL; // cpu ptr
+	TRTDetectionSets[DEVICE] = NULL; // gpu ptr
+	TRTDetectionSet     = 0;
+	TRTMaxDetections    = 0;
 }
 
 
 // destructor
 ObjectDetection::~ObjectDetection()
 {
-	if( mDetectionSets != NULL )
+	if( TRTDetectionSets != NULL )
 	{
 		// shared memory so freeing the host frees the device
-		CUDA(cudaFreeHost(mDetectionSets[HOST]));
+		CUDA(cudaFreeHost(TRTDetectionSets[HOST]));
 		
-		mDetectionSets[HOST] = NULL;
-		mDetectionSets[DEVICE] = NULL;
+		TRTDetectionSets[HOST] = NULL;
+		TRTDetectionSets[DEVICE] = NULL;
 	}
 	
-	if( mClassColors != NULL )
+	if( TRTClassColors != NULL )
 	{
 		// shared memory so freeing the host frees the device
-		CUDA(cudaFreeHost(mClassColors[HOST]));
+		CUDA(cudaFreeHost(TRTClassColors[HOST]));
 		
-		mClassColors[HOST] = NULL;
-		mClassColors[DEVICEw] = NULL;
+		TRTClassColors[HOST] = NULL;
+		TRTClassColors[DEVICEw] = NULL;
 	}
 }
 
@@ -207,10 +208,10 @@ bool ObjectDetection::allocDetections()
 	const size_t det_size = sizeof(Detection) * mNumDetectionSets * mMaxDetections;
 	
 	// allocate shared memory
-	if( !cudaAllocMapped((void**)&mDetectionSets[0], (void**)&mDetectionSets[1], det_size) )
+	if( !cudaAllocMapped((void**)&mDetectionSets[HOST], (void**)&mDetectionSets[DEVICE], det_size) )
 		return false;
 	
-	memset(mDetectionSets[0], 0, det_size);
+	memset(mDetectionSets[HOST], 0, det_size);
 	return true;
 }
 
@@ -221,7 +222,7 @@ bool ObjectDetection::defaultColors()
 {
 	const uint32_t numClasses = GetNumClasses();
 	
-	if( !cudaAllocMapped((void**)&mClassColors[0], (void**)&mClassColors[1], numClasses * sizeof(float4)) )
+	if( !cudaAllocMapped((void**)&mClassColors[HOST], (void**)&mClassColors[DEVICE], numClasses * sizeof(float4)) )
 		return false;
 
 	// if there are a large number of classes (MS COCO)
@@ -388,7 +389,7 @@ bool ObjectDetection::loadClassDesc( const char* filename )
 // Detect
 int ObjectDetection::Detect( float* input, uint32_t width, uint32_t height, Detection** detections, uint32_t overlay )
 {
-	Detection* det = mDetectionSets[0] + mDetectionSet * GetMaxDetections();
+	Detection* det = mDetectionSets[HOST] + mDetectionSet * GetMaxDetections();
 
 	if( detections != NULL )
 		*detections = det;
@@ -415,7 +416,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 
 	// preprocess setp we need to convert our image based on what it was trained on
 	// This will likely be different for EVERY network 
-
 	if( IsModelType(MODEL_UFF) )
 	{
 		if( CUDA_FAILED(cudaPreImageNetNormBGR((float4*)rgba, width, height, mInputCUDA, mWidth, mHeight,
@@ -605,8 +605,8 @@ void ObjectDetection::sortDetections( Detection* detections, int numDetections )
 }
 
 
-// from detectNet.cu
-cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, detectNet::Detection* detections, int numDetections, float4* colors );
+// // from detectNet.cu
+// cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, detectNet::Detection* detections, int numDetections, float4* colors );
 
 // Overlay
 bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )
@@ -625,108 +625,9 @@ bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint
 		if( CUDA_FAILED(cudaDetectionOverlay((float4*)input, (float4*)output, width, height, detections, numDetections, (float4*)mClassColors[1])) )
 			return false;
 	}
-
-	// class label overlay
-	if( (flags & OVERLAY_LABEL) || (flags & OVERLAY_CONFIDENCE) )
-	{
-		static cudaFont* font = NULL;
-
-		// make sure the font object is created
-		if( !font )
-		{
-			font = cudaFont::Create(adaptFontSize(width));
-	
-			if( !font )
-			{
-				printf(LOG_TRT "detectNet -- Overlay() was called with OVERLAY_FONT, but failed to create cudaFont()\n");
-				return false;
-			}
-		}
-
-		// draw each object's description
-		std::vector< std::pair< std::string, int2 > > labels;
-
-		for( uint32_t n=0; n < numDetections; n++ )
-		{
-			const char* className  = GetClassDesc(detections[n].ClassID);
-			const float confidence = detections[n].Confidence * 100.0f;
-			const int2  position   = make_int2(detections[n].Left+5, detections[n].Top+3);
-			
-			if( flags & OVERLAY_CONFIDENCE )
-			{
-				char str[256];
-
-				if( (flags & OVERLAY_LABEL) && (flags & OVERLAY_CONFIDENCE) )
-					sprintf(str, "%s %.1f%%", className, confidence);
-				else
-					sprintf(str, "%.1f%%", confidence);
-
-				labels.push_back(std::pair<std::string, int2>(str, position));
-			}
-			else
-			{
-				// overlay label only
-				labels.push_back(std::pair<std::string, int2>(className, position));
-			}
-		}
-
-		font->OverlayText((float4*)input, width, height, labels, make_float4(255,255,255,255));
-	}
 	
 	// PROFILER_END(PROFILER_VISUALIZE);
 	return true;
-}
-
-
-// OverlayFlagsFromStr
-uint32_t ObjectDetection::OverlayFlagsFromStr( const char* str_user )
-{
-	if( !str_user )
-		return OVERLAY_BOX;
-
-	// copy the input string into a temporary array,
-	// because strok modifies the string
-	const size_t str_length = strlen(str_user);
-
-	if( str_length == 0 )
-		return OVERLAY_BOX;
-
-	char* str = (char*)malloc(str_length + 1);
-
-	if( !str )
-		return OVERLAY_BOX;
-
-	strcpy(str, str_user);
-
-	// tokenize string by delimiters ',' and '|'
-	const char* delimiters = ",|";
-	char* token = strtok(str, delimiters);
-
-	if( !token )
-	{
-		free(str);
-		return OVERLAY_BOX;
-	}
-
-	// look for the tokens:  "box", "label", and "none"
-	uint32_t flags = OVERLAY_NONE;
-
-	while( token != NULL )
-	{
-		//printf("%s\n", token);
-
-		if( strcasecmp(token, "box") == 0 )
-			flags |= OVERLAY_BOX;
-		else if( strcasecmp(token, "label") == 0 || strcasecmp(token, "labels") == 0 )
-			flags |= OVERLAY_LABEL;
-		else if( strcasecmp(token, "conf") == 0 || strcasecmp(token, "confidence") == 0 )
-			flags |= OVERLAY_CONFIDENCE;
-
-		token = strtok(NULL, delimiters);
-	}	
-
-	free(str);
-	return flags;
 }
 
 

@@ -22,9 +22,13 @@
 
 #include <ros/ros.h>
 
+/*
+* ROS messages
+*/
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+
 
 #include "../inference/ObjectDetection.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
