@@ -70,14 +70,14 @@ static ObjectDetection* CreateUFF( const char* model, const char* class_labels, 
 						uint32_t maxBatchSize, precisionType precision,
 				   		deviceType device, bool allowGPUFallback )
 {
-	ObjectDetection* net = new detectNet();
+	ObjectDetection* net = new ObjectDetection();
 	
 	if( !net )
 		return NULL;
 
 	// see what we imprted
 	printf("\n");
-	printf("detectNet -- loading detection network model from:\n");
+	printf("ObjectDetection -- loading ObjectDetection network model from:\n");
 	printf("          -- model        %s\n", CHECK_NULL_STR(model));
 	printf("          -- input_blob   '%s'\n", CHECK_NULL_STR(input));
 	printf("          -- output_blob  '%s'\n", CHECK_NULL_STR(output));
