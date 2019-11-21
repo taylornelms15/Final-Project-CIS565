@@ -55,11 +55,14 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 	// add standard search locations
 	locations.push_back(Process::ExecutableDirectory());
 
+	std::cout << "ExecutableDirectory " << Process::ExecutableDirectory() << std::endl;
+
 	locations.push_back("/usr/local/bin/");
 	locations.push_back("/usr/local/");
 	locations.push_back("/opt/");
 
 	locations.push_back("images/");
+	locations.push_back("data/");
 	locations.push_back("/usr/local/bin/images/");
 	locations.push_back("~/CIS565/droneMoM/src/FinalProjectCIS565/ros_deep_learning/");
 

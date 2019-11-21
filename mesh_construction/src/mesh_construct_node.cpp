@@ -46,6 +46,8 @@
         // since we got the database from setup we can now see what our bounding box contains!
         ROS_INFO("classified: %s", class_descriptions[idx].c_str());
 
+        
+
      }
 
    }
