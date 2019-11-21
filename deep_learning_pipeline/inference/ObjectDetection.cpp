@@ -1,7 +1,7 @@
 
  
 #include "ObjectDetection.h"
-#include "imageNet.cuh"
+#include "../cuda_utilities/imageNet.cuh"
 
 #include "cudaMappedMemory.h"
 #include "cudaFont.h"

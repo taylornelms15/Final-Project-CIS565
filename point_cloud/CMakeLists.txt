@@ -1,26 +1,26 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(point_cloud)
+#cmake_minimum_required(VERSION 2.8.3)
+#project(point_cloud)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 #add_compile_options(-std=c++11)
 
-set("OpenCV_DIR" "/usr/local/share/opencv4")
+#set("OpenCV_DIR" "/usr/local/share/opencv4")
 #find_package(Eigen3 REQUIRED)
-find_package(OpenCV REQUIRED PATHS /usr/local/share)
-find_package(CUDA REQUIRED)
-find_package(PCL 1.3 REQUIRED COMPONENTS common io)
+#find_package(OpenCV REQUIRED PATHS /usr/local/share)
+#find_package(CUDA REQUIRED)
+#find_package(PCL 1.3 REQUIRED COMPONENTS common io)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  sensor_msgs
-  std_msgs
-  vision_msgs
-  pcl_ros
-  tf2_geometry_msgs
-)
+#find_package(catkin REQUIRED COMPONENTS
+#  roscpp
+#  sensor_msgs
+#  std_msgs
+#  vision_msgs
+#  pcl_ros
+#  tf2_geometry_msgs
+#)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -112,12 +112,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+#catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES point_cloud
 #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs
 #  DEPENDS system_lib
-)
+#)
 
 ###########
 ## Build ##
@@ -125,19 +125,19 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
+#include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
-  ${CUDA_INCLUDE_DIRS}
-  ${PCL_INCLUDE_DIRS}
-)
+#  ${catkin_INCLUDE_DIRS}
+#  ${OpenCV_INCLUDE_DIRS}
+#  ${CUDA_INCLUDE_DIRS}
+#  ${PCL_INCLUDE_DIRS}
+#)
 
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+#link_directories(${PCL_LIBRARY_DIRS})
+#add_definitions(${PCL_DEFINITIONS})
 
-list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
-set(CUDA_VERBOSE_BUILD ON)
+#list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
+#set(CUDA_VERBOSE_BUILD ON)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -149,35 +149,35 @@ set(CUDA_VERBOSE_BUILD ON)
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-set(cudasources
-    src/pointMatcher.cu
-)
+#set(cudasources
+#    src/pointMatcher.cu
+#)
 
-set(sources
-    src/point_cloud_node.cpp
-)
+#set(sources
+#    src/point_cloud_node.cpp
+#)
 
-set(headers
-    src/point_cloud_node.h
-    src/pointMatcher.h
-)
+#set(headers
+#    src/point_cloud_node.h
+#    src/pointMatcher.h
+#)
 
-list(SORT sources)
-list(SORT headers)
+#list(SORT sources)
+#list(SORT headers)
 
-source_group(Sources FILES ${sources} ${cudasources})
-source_group(Headers FILES ${headers})
+#source_group(Sources FILES ${sources} ${cudasources})
+#source_group(Headers FILES ${headers})
 
 # Make a CUDA library
-set(LIB_TYPE STATIC)
-cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
+#set(LIB_TYPE STATIC)
+#cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
 
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME} ${sources} ${headers})
-add_dependencies(${PROJECT_NAME} CudaLibrary)
+#add_executable(${PROJECT_NAME} ${sources} ${headers})
+#add_dependencies(${PROJECT_NAME} CudaLibrary)
 
 
 ## Rename C++ executable without prefix
@@ -191,9 +191,9 @@ add_dependencies(${PROJECT_NAME} CudaLibrary)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} CudaLibrary)
+# target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} CudaLibrary)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+#set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 #############
 ## Install ##
