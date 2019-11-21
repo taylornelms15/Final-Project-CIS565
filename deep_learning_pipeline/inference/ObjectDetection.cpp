@@ -5,7 +5,7 @@
 
 #include "../cuda_utilities/cudaMappedMemory.h"
 // dont think ill need this
-#include "cudaFont.h"
+#include "../cuda_utilities/cudaFont.h"
 
 #include "../nvidida_files/commandLine.h"
 #include "../nividia_files/filesystem.h"
