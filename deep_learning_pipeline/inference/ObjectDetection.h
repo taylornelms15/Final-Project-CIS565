@@ -167,43 +167,43 @@ public:
 	/**
 	 * Retrieve the minimum threshold for detection.
 	 */
-	inline float GetThreshold() const							{ return mCoverageThreshold; }
+	inline float GetThreshold() const							{ return TRTCoverageThreshold; }
 
 	/**
 	 * Set the minimum threshold for detection.
 	 */
-	inline void SetThreshold( float threshold ) 					{ mCoverageThreshold = threshold; }
+	inline void SetThreshold( float threshold ) 					{ TRTCoverageThreshold = threshold; }
 
 	/**
 	 * Retrieve the maximum number of simultaneous detections the network supports.
 	 * Knowing this is useful for allocating the buffers to store the output detection results.
 	 */
-	inline uint32_t GetMaxDetections() const					{ return mMaxDetections; } 
+	inline uint32_t GetMaxDetections() const					{ return TRTMaxDetections; } 
 		
 	/**
 	 * Retrieve the number of object classes supported in the detector
 	 */
-	inline uint32_t GetNumClasses() const						{ return mNumClasses; }
+	inline uint32_t GetNumClasses() const						{ return TRTNumClasses; }
 
 	/**
 	 * Retrieve the description of a particular class.
 	 */
-	inline const char* GetClassDesc( uint32_t index )	const		{ return mClassDesc[index].c_str(); }
+	inline const char* GetClassDesc( uint32_t index )	const		{ return TRTClassDesc[index].c_str(); }
 	
 	/**
 	 * Retrieve the class synset category of a particular class.
 	 */
-	inline const char* GetClassSynset( uint32_t index ) const		{ return mClassSynset[index].c_str(); }
+	inline const char* GetClassSynset( uint32_t index ) const		{ return TRTClassSynset[index].c_str(); }
 	
 	/**
  	 * Retrieve the path to the file containing the class descriptions.
 	 */
-	inline const char* GetClassPath() const						{ return mClassPath.c_str(); }
+	inline const char* GetClassPath() const						{ return TRTClassPath.c_str(); }
 
 	/**
 	 * Retrieve the RGBA visualization color a particular class.
 	 */
-	inline float* GetClassColor( uint32_t classIndex ) const		{ return mClassColors[0] + (classIndex*4); }
+	inline float* GetClassColor( uint32_t classIndex ) const		{ return TRTClassColors[0] + (classIndex*4); }
 
 	/**
 	 * Set the visualization color of a particular class of object.
@@ -235,12 +235,12 @@ protected:
 
 	void sortDetections( Detection* detections, int numDetections );
 
-	float  mCoverageThreshold;
-	float* mClassColors[2];
-	float  mMeanPixel;
+	float  TRTCoverageThreshold;
+	float* TRTClassColors[2];
+	float  TRTMeanPixel;
 
-	std::vector<std::string> mClassDesc;
-	std::vector<std::string> mClassSynset;
+	std::vector<std::string> TRTClassDesc;
+	std::vector<std::string> TRTClassSynset;
 
 	std::string TRTClassPath;
 	uint32_t    TRTCustomClasses;
