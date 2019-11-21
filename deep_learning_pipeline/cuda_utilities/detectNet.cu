@@ -5,7 +5,7 @@
 
 
 template<typename T>
-__global__ void gpuDetectionOverlay( T* input, T* output, int width, int height, detectNet::Detection* detections, int numDetections, float4* colors ) 
+__global__ void gpuDetectionOverlay( T* input, T* output, int width, int height, Objectdetection::Detection* detections, int numDetections, float4* colors ) 
 {
 	const int x = blockIdx.x * blockDim.x + threadIdx.x;
 	const int y = blockIdx.y * blockDim.y + threadIdx.y;
