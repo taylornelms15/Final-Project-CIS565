@@ -42,7 +42,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #SET(CUDA_NVCC_FLAGS "-arch=sm_72" CACHE STRING "nvcc flags" FORCE)
 SET(CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE)
 SET(LIB_TYPE STATIC)
-CUDA_ADD_LIBRARY(CUDA_UTIL ${LIB_TYPE} cuda_utilities/imageNet.cuh)
+CUDA_ADD_LIBRARY(CUDA_UTIL ${LIB_TYPE} cuda_utilities/imageNet.cu cuda_utilities/detectNet.cu)
 
 
 # inference nodes
