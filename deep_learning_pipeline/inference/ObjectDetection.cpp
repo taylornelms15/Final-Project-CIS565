@@ -7,8 +7,8 @@
 // dont think ill need this
 #include "../cuda_utilities/cudaFont.h"
 
-#include "../nvidida_files/commandLine.h"
-#include "../nividia_files/filesystem.h"
+#include "../nvidia_files/commandLine.h"
+#include "../nvidia_files/filesystem.h"
 
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map

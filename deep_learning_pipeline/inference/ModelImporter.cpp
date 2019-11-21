@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <assert.h>
 
 /*
 * 
@@ -205,7 +206,7 @@ ModelImporter::ModelImporter()
 {
 	TRTEngine  = NULL; // our tensorRT engine
 	TRTInfer   = NULL; 
-	TRTCntext = NULL;
+	TRTContext = NULL;
 	TRTStream  = NULL;
 
 	TRTWidth          = 0;
@@ -235,16 +236,16 @@ ModelImporter::ModelImporter()
 // Destructor
 ModelImporter::~ModelImporter()
 {
-	if( mEngine != NULL )
+	if( TRTEngine != NULL )
 	{
-		mEngine->destroy();
-		mEngine = NULL;
+		TRTEngine->destroy();
+		TRTEngine = NULL;
 	}
 		
-	if( mInfer != NULL )
+	if( TRTInfer != NULL )
 	{
-		mInfer->destroy();
-		mInfer = NULL;
+		TRTInfer->destroy();
+		TRTInfer = NULL;
 	}
 }
 
@@ -262,7 +263,7 @@ ModelImporter::~ModelImporter()
 // EnableDebug
 void ModelImporter::EnableDebug()
 {
-	mEnableDebug = true;
+	TRTEnableDebug = true;
 }
 
 
@@ -322,6 +323,19 @@ std::vector<precisionType> ModelImporter::DetectNativePrecisions( deviceType dev
 	return types;
 }
 
+static bool ModelImporter::ContainsPrecision( const std::vector<precisionType>& types, precisionType type )
+{
+	const uint32_t numTypes = types.size();
+
+	for( uint32_t n=0; n < numTypes; n++ )
+	{
+		if( types[n] == type )
+			return true;
+	}
+
+	return false;
+}
+
 
 // FindFastestPrecision
 precisionType ModelImporter::FindFastestPrecision( deviceType device )
@@ -330,9 +344,9 @@ precisionType ModelImporter::FindFastestPrecision( deviceType device )
 	std::vector<precisionType> types = DetectNativePrecisions(device);
 
 	// figure out the fastest that we can use
-	if( DetectNativePrecision(types, TYPE_INT8) )
+	if( ContainsPrecision(types, TYPE_INT8) )
 		return TYPE_INT8;
-	else if( DetectNativePrecision(types, TYPE_FP16) )
+	else if( ContainsPrecision(types, TYPE_FP16) )
 		return TYPE_FP16;
 	else
 		return TYPE_FP32;
@@ -367,7 +381,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	nvinfer1::INetworkDefinition* network = builder->createNetwork();
 
 	// set debug flags
-	builder->setDebugSync(mEnableDebug);
+	builder->setDebugSync(TRTEnableDebug);
 
 	// TODO figure out why this is here
 	builder->setMinFindIterations(3);	// allow time for TX1 GPU to spin up
@@ -382,7 +396,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	// TODO support caffe?
 
 	// create our tensorRt parsor for our onnx model
-	if( mModelType == MODEL_ONNX )
+	if( TRTModelType == MODEL_ONNX )
 	{
 		nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, gLogger);
 
@@ -403,8 +417,9 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 			printf(LOG_TRT "failed to parse ONNX model '%s'\n", modelFile.c_str());
 			return false;
 		}
+		parser->destroy();
 	}
-	else if( mModelType == MODEL_UFF )
+	else if( TRTModelType == MODEL_UFF )
 	{
 		// create parser instance
 		nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
@@ -437,6 +452,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 			printf(LOG_TRT "failed to parse UFF model '%s'\n", modelFile.c_str());
 			return false;
 		}
+		parser->destroy();
 	
 	}
 	else
@@ -483,7 +499,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 		
 		if( !calibrator )
 		{
-			calibrator = new randInt8Calibrator(1, mCacheCalibrationPath, inputDimensions);
+			calibrator = new randInt8Calibrator(1, TRTCacheCalibrationPath, inputDimensions);
 			printf(LOG_TRT "warning:  device %s using INT8 precision with RANDOM calibration\n", deviceTypeToStr(device));
 		}
 
@@ -542,10 +558,10 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	gieModelStream.write((const char*)serMem->data(), serMem->size());
 
 	//
-	printf(LOG_TRT "device %s, completed building CUDA engine preparing to clean upw\n");
+	printf(LOG_TRT "device %s, completed building CUDA engine preparing to clean upw\n",deviceTypeToStr(device));
 
 	// clean up
-	parser->destroy();
+
 	network->destroy();
 	engine->destroy();
 	builder->destroy();
@@ -569,7 +585,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 
 	printf(LOG_TRT "loading NVIDIA plugins...\n");
 
-	loadedPlugins = initLibNvInferPlugins(&gLogger, "");
+	bool loadedPlugins = initLibNvInferPlugins(&gLogger, "");
 
 	if( !loadedPlugins )
 		printf(LOG_TRT "failed to load NVIDIA plugins\n");
@@ -590,7 +606,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 
 	// TODO add error handling
 
-	mModelType = model_fmt;
+	TRTModelType = model_fmt;
 
 
 	/*
@@ -626,13 +642,13 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 
 	sprintf(cache_prefix, "%s.%u.%u.%s.%s", model_path.c_str(), maxBatchSize, (uint32_t)allowGPUFallback, deviceTypeToStr(device), precisionTypeToStr(precision));
 	sprintf(cache_path, "%s.calibration", cache_prefix);
-	mCacheCalibrationPath = cache_path;
+	TRTCacheCalibrationPath = cache_path;
 	
 	sprintf(cache_path, "%s.engine", cache_prefix);
 	mCacheEnginePath = cache_path;	
-	printf(LOG_TRT "attempting to open engine cache file %s\n", mCacheEnginePath.c_str());
+	printf(LOG_TRT "attempting to open engine cache file %s\n", TRTCacheEnginePath.c_str());
 	
-	std::ifstream cache( mCacheEnginePath );
+	std::ifstream cache( TRTCacheEnginePath );
 
 	// if file is not present then we load and store for next useage
 	if( !cache )
@@ -653,18 +669,18 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 			return 0;
 		}
 	
-		printf(LOG_TRT "network profiling complete, writing engine cache to %s\n", mCacheEnginePath.c_str());
+		printf(LOG_TRT "network profiling complete, writing engine cache to %s\n", TRTCacheEnginePath.c_str());
 		std::ofstream outFile;
-		outFile.open(mCacheEnginePath);
+		outFile.open(TRTCacheEnginePath);
 		outFile << gieModelStream.rdbuf();
 		outFile.close();
 		gieModelStream.seekg(0, gieModelStream.beg);
-		printf(LOG_TRT "device %s, completed writing engine cache to %s\n", deviceTypeToStr(device), mCacheEnginePath.c_str());
+		printf(LOG_TRT "device %s, completed writing engine cache to %s\n", deviceTypeToStr(device), TRTCacheEnginePath.c_str());
 	}
 	// we have a configuration already so load and go
 	else
 	{
-		printf(LOG_TRT "loading network profile from engine cache... %s\n", mCacheEnginePath.c_str());
+		printf(LOG_TRT "loading network profile from engine cache... %s\n", TRTCacheEnginePath.c_str());
 		gieModelStream << cache.rdbuf();
 		cache.close();
 	}
@@ -726,7 +742,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	}
 
 	// if debug provided add it to the context engine
-	if( mEnableDebug )
+	if( TRTEnableDebug )
 	{
 		printf(LOG_TRT "device %s, enabling context debug sync.\n", deviceTypeToStr(device));
 		context->setDebugSync(true);
@@ -734,15 +750,15 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 
 	// set our profiler
 	// TODO what does a profiler do...
-	if( mEnableProfiler )
+	if( TRTEnableProfiler )
 		context->setProfiler(&gProfiler);
 
 	printf(LOG_TRT "device %s, CUDA engine context initialized with %u bindings\n", deviceTypeToStr(device), engine->getNbBindings());
 	
 	// save off our classes for inference
-	mInfer   = infer;
-	mEngine  = engine;
-	mContext = context;
+	TRTInfer   = infer;
+	TRTEngine  = engine;
+	TRTContext = context;
 	
 	// set stream
 	SetStream(stream);
@@ -791,17 +807,17 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	/*
 	 * allocate shared memory
 	 */
-	if( !cudaAllocMapped((void**)&mInputCPU, (void**)&mInputCUDA, inputSize) )
+	if( !cudaAllocMapped((void**)&TRTInputCPU, (void**)&TRTInputCUDA, inputSize) )
 	{
 		printf(LOG_TRT "failed to alloc CUDA mapped memory for tensor input, %zu bytes\n", inputSize);
 		return false;
 	}
 	
 	// safe off our settings
-	mInputSize    = inputSize;
-	mWidth        = DIMS_W(inputDims);
-	mHeight       = DIMS_H(inputDims);
-	mMaxBatchSize = maxBatchSize;
+	TRTInputSize    = inputSize;
+	TRTWidth        = DIMS_W(inputDims);
+	TRTHeight       = DIMS_H(inputDims);
+	TRTMaxBatchSize = maxBatchSize;
 	
 
 	/*
@@ -851,28 +867,28 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	}
 	
 
-	/*
-	 * create events for timing
-	 */
-	for( int n=0; n < PROFILER_TOTAL * 2; n++ )
-		CUDA(cudaEventCreate(&mEventsGPU[n]));
+	// /*
+	//  * create events for timing
+	//  */
+	// for( int n=0; n < PROFILER_TOTAL * 2; n++ )
+	// 	CUDA(cudaEventCreate(&mEventsGPU[n]));
 
 	// TODO figure out our version
-	DIMS_W(mInputDims) = DIMS_W(inputDims);
-	DIMS_H(mInputDims) = DIMS_H(inputDims);
-	DIMS_C(mInputDims) = DIMS_C(inputDims);
+	DIMS_W(TRTInputDims) = DIMS_W(inputDims);
+	DIMS_H(TRTInputDims) = DIMS_H(inputDims);
+	DIMS_C(TRTInputDims) = DIMS_C(inputDims);
 
-	mPrototxtPath     = prototxt_path;
-	mModelPath        = model_path;
-	mInputBlobName    = input_blob;
-	mPrecision        = precision;
-	mDevice           = device;
-	mAllowGPUFallback = allowGPUFallback;
+	TRTPrototxtPath     = prototxt_path;
+	TRTModelPath        = model_path;
+	TRTInputBlobName    = input_blob;
+	TRTPrecision        = precision;
+	TRTDevice           = device;
+	TRTAllowGPUFallback = allowGPUFallback;
 
 	if( mean_path != NULL )
-		mMeanPath = mean_path;
+		TRTMeanPath = mean_path;
 	
-	printf("device %s, %s initialized.\n", deviceTypeToStr(device), mModelPath.c_str());
+	printf("device %s, %s initialized.\n", deviceTypeToStr(device), TRTModelPath.c_str());
 	return true;
 }
 

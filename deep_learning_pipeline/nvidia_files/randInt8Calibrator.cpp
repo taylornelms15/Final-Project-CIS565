@@ -21,7 +21,7 @@
  */
 
 #include "randInt8Calibrator.h"
-#include "cudaUtility.h"
+#include "../cuda_utilities/cudaUtility.h"
 
 #include <random>
 #include <iterator>
