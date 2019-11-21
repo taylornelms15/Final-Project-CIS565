@@ -607,19 +607,19 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	 */
 	printf(LOG_TRT "desired precision specified for %s: %s\n", deviceTypeToStr(device), precisionTypeToStr(precision));
 
-	// if( precision == TYPE_FASTEST )
-	// {
-	// 	if( !calibrator )
-	// 		printf(LOG_TRT "requested fasted precision for device %s without providing valid calibrator, disabling INT8\n", deviceTypeToStr(device));
+	if( precision == TYPE_FASTEST )
+	{
+		if( !calibrator )
+			printf(LOG_TRT "requested fasted precision for device %s without providing valid calibrator, disabling INT8\n", deviceTypeToStr(device));
 
-	// 	precision = FindFastestPrecision(device, (calibrator != NULL));
-	// 	printf(LOG_TRT "selecting fastest native precision for %s:  %s\n", deviceTypeToStr(device), precisionTypeToStr(precision));
-	// }
-	// else
-	// {
-	// 	// assert, force me to choose
-	// 	assert(precision == TYPE_FASTEST);
-	// }
+		precision = FindFastestPrecision(device, (calibrator != NULL));
+		printf(LOG_TRT "selecting fastest native precision for %s:  %s\n", deviceTypeToStr(device), precisionTypeToStr(precision));
+	}
+	else
+	{
+		// assert, force me to choose
+		assert(precision == TYPE_FASTEST);
+	}
 
 
 

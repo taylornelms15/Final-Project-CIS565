@@ -78,11 +78,6 @@ inline cudaError_t cudaCheckError(cudaError_t retval, const char* txt, const cha
 	if( retval == cudaSuccess)
 		return cudaSuccess;
 #endif
-
-	//int activeDevice = -1;
-	//cudaGetDevice(&activeDevice);
-
-	//Log("[cuda]   device %i  -  %s\n", activeDevice, txt);
 	
 	printf(LOG_CUDA "%s\n", txt);
 
