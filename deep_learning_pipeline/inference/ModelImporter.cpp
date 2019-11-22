@@ -287,13 +287,13 @@ std::vector<precisionType> ModelImporter::DetectNativePrecisions( deviceType dev
 	// detect fast (native) FP16
 	if( builder->platformHasFastFp16() ){
 		types.push_back(TYPE_FP16);
-		printf(LOG_TRT "fp16 detected on platform");
+		printf(LOG_TRT "fp16 detected on platform\n");
 	}
 
 	// detect fast (native) INT8
 	if( builder->platformHasFastInt8() ){
 		types.push_back(TYPE_INT8);
-		printf(LOG_TRT "int8 detected on platform");
+		printf(LOG_TRT "int8 detected on platform\n");
 	}
 
 	// Now we have all of our supported types that we can run at
@@ -448,7 +448,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 			printf(LOG_TRT "failed to parse UFF model '%s'\n", modelFile.c_str());
 			return false;
 		}
-		parser->destroy();
+	//	parser->destroy();
 	
 	}
 	else
@@ -878,7 +878,7 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	if( mean_path != NULL )
 		TRTMeanPath = mean_path;
 	
-	printf("device %s, %s initialized.\n", deviceTypeToStr(device), TRTModelPath.c_str());
+	printf(LOG_TRT "device %s, %s initialized.\n", deviceTypeToStr(device), TRTModelPath.c_str());
 	return true;
 }
 

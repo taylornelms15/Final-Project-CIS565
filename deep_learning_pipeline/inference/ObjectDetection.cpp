@@ -107,10 +107,15 @@ ObjectDetection* ObjectDetection::CreateUFF( const char* model, const char* clas
 		printf("detectNet -- failed to initialize.\n");
 		return NULL;
 	}
-	
+
+	printf(LOG_TRT " allocating ... \n" );
+
 	// allocate detection sets
 	if( !net->allocDetections() )
 		return NULL;
+
+
+	printf(LOG_TRT " loading class descriptors \n" );
 
 	// load class descriptions
 	net->loadClassDesc(class_labels);
@@ -120,8 +125,12 @@ ObjectDetection* ObjectDetection::CreateUFF( const char* model, const char* clas
 	if( !net->defaultColors() )
 		return NULL;
 
+	printf(LOG_TRT "setting threshold \n");
+
 	// set the specified threshold
 	net->SetThreshold(threshold);
+
+	printf(LOG_TRT "threshold set! exiting function\n");
 
 	return net;
 }
@@ -171,15 +180,14 @@ ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* mo
 // Create
 ObjectDetection* ObjectDetection::Create( NetworkType model )
 {
-	ObjectDetection* net = new ObjectDetection();
+//	ObjectDetection* net = new ObjectDetection();
 	
-	if( !net )
-		return NULL;
+//	if( !net )
+//		return NULL;
 
-	if( CreateModel( model ) )
-		return NULL;
+	return CreateModel( model ); 
 
-	return net;
+//	return net;
 }
 	
 
@@ -253,7 +261,7 @@ bool ObjectDetection::defaultColors()
 			TRTClassColors[0][i*4+2] = b;
 			TRTClassColors[0][i*4+3] = DETECTNET_DEFAULT_ALPHA; 
 
-			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)DETECTNET_DEFAULT_ALPHA);
+//			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)DETECTNET_DEFAULT_ALPHA);
 		}
 	}
 	else
