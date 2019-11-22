@@ -2,9 +2,23 @@
 #include "img_write.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb/stb_image_write.h"
+#include "write_img.h"
 
 #define LOG_IMAGE "[image] "
+
+
+// limit_pixel
+static inline unsigned char limit_pixel( float pixel, float max_pixel )
+{
+	if( pixel < 0 )
+		pixel = 0;
+
+	if( pixel > max_pixel )
+		pixel = max_pixel;
+
+	return (unsigned char)pixel;
+}
+
 
 // saveImageRGBA
 bool saveImageRGBA( const char* filename, float4* cpu, int width, int height, float max_pixel, int quality )
@@ -64,7 +78,7 @@ bool saveImageRGBA( const char* filename, float4* cpu, int width, int height, fl
 	// }
 
 	// // save the image
-	// int save_result = 0;
+	int save_result = 0;
 
 	// if( strcasecmp(extension, "jpg") == 0 || strcasecmp(extension, "jpeg") == 0 )
 	// {

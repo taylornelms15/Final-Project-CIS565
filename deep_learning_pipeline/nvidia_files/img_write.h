@@ -1,6 +1,7 @@
 #ifndef __IMAGE_IO_H_
 #define __IMAGE_IO_H_
 
+#include "../cuda_utilities/cudaUtility.h"
 
 /**
  * Save a float4 RGBA image to disk.

@@ -34,7 +34,7 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
-#include "nvidia_files/img_write.h"
+#include "../nvidia_files/img_write.h"
 #include "../inference/ObjectDetection.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
 
@@ -42,6 +42,8 @@
 
 #include <unordered_map>
 
+using namespace sensor_msgs;
+using namespace message_filters;
 
 // globals
 ObjectDetection* 	 net = NULL;
@@ -61,7 +63,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu& msg )
+void img_callback( const sensor_msgs::ImageConstPtr& input/*, const sensor_msgs::Imu& msg*/ )
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -126,7 +128,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 
 		if( numDetections > 3 )
 		{
-			if( !saveImageRGBA("file.jpg", (float4*)cvt->imgCPU(), cvt->GetWidth(), cvt->GetHeight(), 255.0f) )
+			if( !saveImageRGBA("file.jpg", (float4*)cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), 255.0f) )
 				printf("failed saving %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
 			else	
 				printf("successfully wrote %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
@@ -135,12 +137,12 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 		detection_pub->publish(msg);
 	}
 
-	int time2_secs = input.header.stamp.sec;
-    int time2_nsecs = input.header.stamp.nsec;
+	int time2_secs = input->header.stamp.sec;
+    int time2_nsecs = input->header.stamp.nsec;
     double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
-	ROS_INFO("===IMAGE %s===", input.header.frame_id.c_str());
+	ROS_INFO("===IMAGE %s===", input->header.frame_id.c_str());
     ROS_INFO("\ttime: %9.6f", timeValue2);
-	int time_secs = msg.header.stamp.sec;
+/*	int time_secs = msg.header.stamp.sec;
     int time_nsecs = msg.header.stamp.nsec;
     double timeValue = time_secs + (1e-9 * time_nsecs);
 	ROS_INFO("===IMU %s===", msg.header.frame_id.c_str());
@@ -149,7 +151,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
     ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
     ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
     ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
-
+*/
 }
 
 
@@ -258,14 +260,20 @@ int main(int argc, char **argv)
 	 * subscribe to image topic
 	 */
 	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	// ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	// ros::Subscriber imu_sub = private_nh.subscribe("/image_publisher/image_raw", 5, imu_callback);
-	message_filters::Subscriber<Image> image_sub(private_nh, "/image_publisher/image_raw", 50);
-  	message_filters::Subscriber<Imu> info_sub(private_nh, "imu", 50);
-  	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
-  	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, info_sub);
+	
+	
+//	message_filters::Subscriber<Image> image_sub(private_nh, "/image_publisher/image_raw", 50);
+  	
+//	message_filters::Subscriber<Imu> imu_sub(private_nh, "/imu", 50);
+  	
+//	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
+  	
+//	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub);
   	// TimeSynchronizer<Image, CameraInfo> sync(image_sub, info_sub, 10);
-  	sync.registerCallback(boost::bind(&img_callback, _1, _2));
+  	
+//	sync.registerCallback(boost::bind(&img_callback, _1, _2));
 
 	/*
 	 * wait for messages
