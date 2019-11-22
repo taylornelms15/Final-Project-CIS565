@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 	 */
 	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
 	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
-	// ros::Subscriber imu_sub = private_nh.subscribe("/image_publisher/image_raw", 5, imu_callback);
+// ros::Subscriber imu_sub = private_nh.subscribe("/image_publisher/image_raw", 5, imu_callback);
 	
 	
 //	message_filters::Subscriber<Image> image_sub(private_nh, "/image_publisher/image_raw", 50);
