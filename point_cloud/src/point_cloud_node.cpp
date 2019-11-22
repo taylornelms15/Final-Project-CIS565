@@ -1,85 +1,173 @@
-#include <ros/ros.h>
-#include "std_msgs/String.h"
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <geometry_msgs/PointStamped.h>
-#include <vision_msgs/Detection2DArray.h>
-#include <vision_msgs/VisionInfo.h>
+#include "point_cloud_node.h"
 
-   std::vector<std::string> class_descriptions;
-   std::string key;
-  /**
-   * This tutorial demonstrates simple receipt of messages over the ROS system.
-   * http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28c%2B%2B%29
-   */
-  // this callback is only called once once you subscribe
-   void VisionCallback(const vision_msgs::VisionInfo& msg)
-   {
-    // print stuff to show 
-    ROS_INFO("DataBase: %s", msg.database_location.c_str());
-    ROS_INFO("method: %s", msg.method.c_str());
-     
-     // get the key to the classification database and store it in our vector
-     key = msg.database_location.c_str();
-     ros::NodeHandle nh("~");
-     nh.getParam(key, class_descriptions);
+#define DEBUGOUT 1
 
-   }
-
-   // this is registered every image sent
-   void DetectionCallback(const vision_msgs::Detection2DArray& msg)
-   {
-      // print stuff to show how stuff works
-     // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
-     int detected_elements = msg.detections.size();
-     for(int i = 0; i < detected_elements; i++)
-     {
-        ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);
-        ROS_INFO("bbox cx: %9.6f", msg.detections[i].bbox.center.x);
-        ROS_INFO("bbox Y: %9.6f", msg.detections[i].bbox.size_y);
-        ROS_INFO("bbox cy: %9.6f", msg.detections[i].bbox.center.y);
-
-        // there is only 1 result per detection I am 99% sure
-        ROS_INFO("confidece: %1.6f", msg.detections[i].results[0].score);     
-     
-        int idx = msg.detections[i].results[0].id;
+#define DEBUGIMAGE (DEBUGOUT && 1)
+#define DEBUGXFORM (DEBUGOUT && 0)
 
 
-        // since we got the database from setup we can now see what our bounding box contains!
-        ROS_INFO("classified: %s", class_descriptions[idx].c_str());
+using namespace cv;
+using namespace cv::xfeatures2d;
 
-     }
+    const static char imageSubPath[] = "color_image";
+    const static char xformSubPath1[] = "T_G_C";//tranformation for color camera
+    const static char xformSubPath2[] = "T_G_D";//transformation for depth camera
+    
+    static int imageNumber = 0;
+    static double                       xformTime = -1;
+    static double                       lastXformTime = -1;
+    static tf2::Transform               xform;
+    static pcl::PointCloud<PointT> pcloud = pcl::PointCloud<PointT>(); 
+    static float                        FoV = 45.0;//making up a field of view?
 
-   }
+    static Mat prevImage = Mat();
+    static tf2::Transform prevxform;
+
+    void showMatches(Mat img1, Mat img2){
+        //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
+        int minHessian = 300;
+        Ptr<SURF> detector = SURF::create( minHessian );
+        std::vector<KeyPoint> keypoints1, keypoints2;
+        Mat descriptors1, descriptors2;
+        detector->detectAndCompute( img1, noArray(), keypoints1, descriptors1 );
+        detector->detectAndCompute( img2, noArray(), keypoints2, descriptors2 );
+        //-- Step 2: Matching descriptor vectors with a FLANN based matcher
+        // Since SURF is a floating-point descriptor NORM_L2 is used
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+        std::vector< std::vector<DMatch> > knn_matches;
+        matcher->knnMatch( descriptors1, descriptors2, knn_matches, 2 );
+        //-- Filter matches using the Lowe's ratio test
+        const float ratio_thresh = 0.7f;
+        std::vector<DMatch> good_matches;
+        for (size_t i = 0; i < knn_matches.size(); i++)
+        {
+            if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
+            {
+                good_matches.push_back(knn_matches[i][0]);
+            }
+        }
+        //-- Draw matches
+        Mat img_matches;
+        drawMatches( img1, keypoints1, img2, keypoints2, good_matches, img_matches, Scalar::all(-1),
+                     Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+        //-- Show detected matches
+        imshow("Good Matches", img_matches );
+        waitKey(0);
+    }//showMatches
+
+    void ImageCallback(const sensor_msgs::Image& msg){
+        if (lastXformTime == xformTime) return;//don't take a new image without new positional data
+        imageNumber++;
+
+        //for at least one dataset, all the data is bgr format, which opencv likes
+        int width = msg.width;
+        int height = msg.height;
+
+
+        Mat thisImage = Mat(height, width, getEncodingTypeForCV(msg.encoding), (void*) msg.data.data());
+
+#if DEBUGIMAGE
+        ROS_INFO("===IMAGE===");
+        ROS_INFO("\ttime of last xform: %f", xformTime);
+#endif
+
+        if (imageNumber % 4 != 0){
+            return;//only process one image every 4 frames
+        }//if
+
+        if (prevImage.empty()){
+            prevImage = thisImage.clone();
+            prevxform = tf2::Transform(xform);
+        }
+        else{
+            showMatches(prevImage, thisImage);
+
+            //imshow("Previous", prevImage);
+            //imshow("Current", thisImage);
+        }//else
+
+        //Every 16 frames, put some more points in the cloud  
+        /*
+        if (imageNumber % 16 == 0){
+            float zNDC = 0.5f;//fake depth because we're not working with the real stuff yet
+            tf2::Vector3 viewPosition = tf2::Vector3(0.0f, 0.0f, 0.0f);
+            tf2::Vector3 transformedPosition = viewPosition + xform.getOrigin();
+            for(int j = 0; j < height; j++){
+                if (j % 2 == 0) continue;//less-dense output
+                float yNDC = (j / (height - 1.0f)) * 2.0f - 1.0f;
+                for(int i = 0; i < width; i++){
+                    if (i % 2 == 0) continue;//less-dense output
+                    //get a 3d point for our pixels (assuming depth = 1)
+                    //scale position to between -1 and 1
+                    float xNDC = (i / (width - 1.0f)) * 2.0f - 1.0f;
+                    tf2::Vector3 viewDirection = tf2::Vector3(xNDC, yNDC, zNDC);
+                    tf2::Vector3 transformedDirection = xform(viewDirection);
+
+                    tf2::Vector3 finalPoint = transformedPosition + 1.0 * transformedDirection;
+
+                    Vec3b bgr = thisImage.at<Vec3b>(j, i);
+                    int label = 0;
+                    PointT point = PointT(bgr[2], bgr[1], bgr[0], label);
+                    point.x = finalPoint[0]; point.y = finalPoint[1]; point.z = finalPoint[2];
+                    pcloud.push_back(point);
+
+
+                }//for col
+            }//for row
+        }//if
+        */
+
+
+        //imwrite("testOutputImage.jpg", thisImage);
+
+        lastXformTime = xformTime;
+
+
+        //Output point cloud for debugging
+        /*
+        if (imageNumber == 80){
+            pcl::io::savePCDFile("testOutput.pcd", pcloud);
+        }//if
+        */
+
+    }//ImageCallback
+
+
+    void TransformCallback(const geometry_msgs::TransformStamped& msg){
+        int time_secs = msg.header.stamp.sec;
+        int time_nsecs = msg.header.stamp.nsec;
+        double timeValue = time_secs + (1e-9 * time_nsecs);
+        geometry_msgs::Vector3 xlate        = msg.transform.translation;
+        geometry_msgs::Quaternion rotate    = msg.transform.rotation;
+
+        xformTime = timeValue;
+        tf2::fromMsg(msg.transform, xform);
+
+#if DEBUGXFORM
+        ROS_INFO("===XFORM %s===", msg.header.frame_id.c_str());
+        ROS_INFO("\ttime: %f", timeValue);
+        ROS_INFO("\tTranslation:\t<%.05f, %.05ff, %.05f>", xlate.x, xlate.y, xlate.z);
+        ROS_INFO("\tRotation:\t<%.05f, %.05f, %.05f, %.05f>", rotate.x, rotate.y, rotate.z, rotate.w);
+#endif
+
+
+    }//TransformCallback
 
 
       // this is registered every image sent
-   void ImuCallback(const sensor_msgs::Imu& msg)
-   {
+    void ImuCallback(const sensor_msgs::Imu& msg){
       // print stuff to show how stuff works
     //http://docs.ros.org/melodic/api/sensor_msgs/html/msg/Imu.html
     // not sure what the numbers are supposed to look like but they seem a bit weird just FYI
-      ROS_INFO("orientation X: %9.6f", msg.orientation_covariance[0]);
-      ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
-      ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
-      ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
+        ROS_INFO("orientation X: %9.6f", msg.orientation_covariance[0]);
+        ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
+        ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
+        ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
       
+    }
 
-   }
+    int main(int argc, char **argv){
 
-   //    // this is registered every image sent
-   void PositionCallback(const geometry_msgs::PointStamped& msg)
-   {
-      // print stuff to show how stuff works
-     // http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PointStamped.html
-      ROS_INFO("point X: %9.6f", msg.point.x);
-      ROS_INFO("point y: %9.6f", msg.point.y);
-      ROS_INFO("point z: %9.6f", msg.point.z);
-
-   }
-   
-   int main(int argc, char **argv)
-   {
      /**
       * The ros::init() function needs to see argc and argv so that it can perform
       * any ROS arguments and name remapping that were provided at the command line.
@@ -90,14 +178,14 @@
       * You must call one of the versions of ros::init() before using any other
       * part of the ROS system.
       */
-     ros::init(argc, argv, "point_cloud");
+        ros::init(argc, argv, "point_cloud");
    
      /**
       * NodeHandle is the main access point to communications with the ROS system.
       * The first NodeHandle constructed will fully initialize this node, and the last
       * NodeHandle destructed will close down the node.
       */
-     ros::NodeHandle n;
+        ros::NodeHandle n;
    
      /**
       * The subscribe() call is how you tell ROS that you want to receive messages
@@ -116,22 +204,29 @@
       * Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
       * 
       */
-     ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
 
-     ros::Subscriber sub2 = n.subscribe("/detectnet/detections", 1000, DetectionCallback); 
+        ros::Subscriber cameraSub = n.subscribe(imageSubPath, 1000, ImageCallback);
 
-     ros::Subscriber sub3 = n.subscribe("/imu0", 1000, ImuCallback); 
+        ros::Subscriber xformColorSub = n.subscribe(xformSubPath1, 1000, TransformCallback);
+        //ros::Subscriber xformDepthSub = n.subscribe(xformSubPath2, 1000, TransformCallback);
+        float array1[32];
+        float array2[32];
+        for (int i = 0; i < 32; i++){
+            array1[i] = (float) ((i * 23) % 5);
+            array2[i] = (float) ((i * 25) % 6);
+        }//for
+        float dotProduct = testCudaFunctionality(array1, array2);
+        ROS_INFO("Dot product: %f", dotProduct);
 
-     ros::Subscriber sub4 = n.subscribe("/leica/position", 1000, PositionCallback);     
 
-     ROS_INFO("point cloud, waiting for messages");
+        ROS_INFO("point cloud, waiting for messages");
    
      /**
       * ros::spin() will enter a loop, pumping callbacks.  With this version, all
       * callbacks will be called from within this thread (the main one).  ros::spin()
       * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
       */
-    ros::spin();
-  
-  return 0;
-  }
+        ros::spin();
+
+        return 0;
+    }//main
