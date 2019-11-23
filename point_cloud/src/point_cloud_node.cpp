@@ -49,9 +49,6 @@ using namespace cv::xfeatures2d;
         //TODO: remove this line
         good_matches.resize(10);
         //-- Draw matches
-        std::vector<PointSub> retval = getMatchingWorldPoints(img1, keypoints1, xform1,
-                               img2, keypoints2, xform2,
-                               good_matches);
         Mat img_matches;
         drawMatches( img1, keypoints1, img2, keypoints2, good_matches, img_matches, Scalar::all(-1),
                      Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
@@ -59,6 +56,9 @@ using namespace cv::xfeatures2d;
         //imshow("Good Matches", img_matches );
         //waitKey(0);
         imwrite("matches.jpg", img_matches);
+        std::vector<PointSub> retval = getMatchingWorldPoints(img1, keypoints1, xform1,
+                               img2, keypoints2, xform2,
+                               good_matches);
         return retval;
     }//showMatches
 
@@ -105,6 +105,21 @@ using namespace cv::xfeatures2d;
             viewPosition = xform.getOrigin();
             point2.x = viewPosition[0]; point2.y = viewPosition[1]; point2.z = viewPosition[2];
             pcloud.push_back(point2);
+
+            //put our "view" direction points in
+            tf2::Transform prevrotate = tf2::Transform(prevxform.getRotation());
+            tf2::Transform rotate = tf2::Transform(xform.getRotation());
+            viewPosition = tf2::Vector3(0.0005, 0.0, 0.0);
+            tf2::Vector3 viewa1 = prevrotate(viewPosition);
+            tf2::Vector3 view1 = viewa1 + prevxform.getOrigin();
+            point = PointT(0, 255, 0, 2);
+            point.x = view1[0]; point.y = view1[1]; point.z = view1[2];
+            pcloud.push_back(point);
+            tf2::Vector3 viewa2 = rotate(viewPosition);
+            tf2::Vector3 view2 = viewa2 + xform.getOrigin();
+            point = PointT(0, 255, 0, 2);
+            point.x = view2[0]; point.y = view2[1]; point.z = view2[2];
+            pcloud.push_back(point);
 
 
             pcl::io::savePCDFile("testOutput.pcd", pcloud);

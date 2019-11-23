@@ -12,8 +12,8 @@
 
 //office dataset: recorded on Google Tango tablet
 //the camera's model number: OV4682 RGB IR
-static float    FoV = 131.0;
-//static float    FoV = 120.0;
+//static float    FoV = 131.0;
+static float    FoV = 120.0;
 
 float* d_A1;
 float* d_A2;
@@ -60,7 +60,9 @@ tf2::Vector3 zForwardToOrientation(float X, float Y, float Z){
     //we rotate to a world where o1=(0,0,0), o2=(0,0,1)
     //and "forward" for both is (-1,0,0), with "up" at (0,-1,0) and "right" at (0,0,1)
     //-Z, X, Y
-    return tf2::Vector3(-Z, X, Y);
+    //return tf2::Vector3(-Z, X, Y);
+    //return tf2::Vector3(Z, X, Y);
+    return tf2::Vector3(-Z, -X, Y);
 
 }//zForwardToOrientation
 
@@ -71,6 +73,10 @@ PointSub matchTwoPoints(PointSub pt1,
                         float fov,
                         float* distance,//out param
                         int width, int height){
+    //make our rotation-only transforms                    
+    tf2::Transform rotate1 = tf2::Transform(xform1.getRotation());
+    tf2::Transform rotate2 = tf2::Transform(xform2.getRotation());
+    //make return value
     PointSub retval = {};
     //get NDC ranging [0:1]
     float percentX1 = pt1.x / width; float percentY1 = pt1.y / height;
@@ -82,20 +88,18 @@ PointSub matchTwoPoints(PointSub pt1,
     percentX1 *= aspectRatio; percentX2 *= aspectRatio;
     //turn these into ray pieces
     float halftan = glm::tan(glm::radians(fov / 2.0f));
-    float X1 = percentX1 * halftan; float Y1 = percentY1 * halftan;
-    float X2 = percentX2 * halftan; float Y2 = percentY2 * halftan;
+    float Xa1 = percentX1 * halftan; float Ya1 = percentY1 * halftan;
+    float Xa2 = percentX2 * halftan; float Ya2 = percentY2 * halftan;
     //normalize
-    float len1 = glm::length(glm::vec3(X1, Y1, 1.0f));
-    float len2 = glm::length(glm::vec3(X2, Y2, 1.0f));
-    float Z1 = 1.0f / len1; X1 /= len1; Y1 /= len1;
-    float Z2 = 1.0f / len2; X2 /= len2; Y2 /= len2;
+    float len1 = glm::length(glm::vec3(Xa1, Ya1, 1.0f));
+    float len2 = glm::length(glm::vec3(Xa2, Ya2, 1.0f));
+    float Z1 = 1.0f / len1; float X1 = Xa1 / len1; float Y1 = Ya1 / len1;
+    float Z2 = 1.0f / len2; float X2 = Xa2 / len2; float Y2 = Ya2 / len2;
     //make direction vector and transform
-    //tf2::Vector3 Da1 = tf2::Vector3(X1, Y1, Z1);
-    //tf2::Vector3 Da2 = tf2::Vector3(X2, Y2, Z2);
     tf2::Vector3 Da1 = zForwardToOrientation(X1, Y1, Z1);
     tf2::Vector3 Da2 = zForwardToOrientation(X2, Y2, Z2);
-    tf2::Vector3 D1 = xform1(Da1);
-    tf2::Vector3 D2 = xform2(Da2);
+    tf2::Vector3 D1 = rotate1(Da1);
+    tf2::Vector3 D2 = rotate2(Da2);
     //make glm vectors for position, direction
     tf2::Vector3 o1 = xform1.getOrigin();
     tf2::Vector3 o2 = xform2.getOrigin();
