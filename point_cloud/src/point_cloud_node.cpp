@@ -22,9 +22,10 @@ using namespace cv::xfeatures2d;
     static Mat prevImage = Mat();
     static tf2::Transform prevxform;
 
+
     std::vector<PointSub> showMatches(Mat img1, Mat img2, tf2::Transform xform1, tf2::Transform xform2){
         //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
-        int minHessian = 300;
+        int minHessian = 700;
         Ptr<SURF> detector = SURF::create( minHessian );
         std::vector<KeyPoint> keypoints1, keypoints2;
         Mat descriptors1, descriptors2;
@@ -45,6 +46,8 @@ using namespace cv::xfeatures2d;
                 good_matches.push_back(knn_matches[i][0]);
             }
         }
+        //TODO: remove this line
+        good_matches.resize(10);
         //-- Draw matches
         std::vector<PointSub> retval = getMatchingWorldPoints(img1, keypoints1, xform1,
                                img2, keypoints2, xform2,
@@ -53,8 +56,9 @@ using namespace cv::xfeatures2d;
         drawMatches( img1, keypoints1, img2, keypoints2, good_matches, img_matches, Scalar::all(-1),
                      Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
         //-- Show detected matches
-        imshow("Good Matches", img_matches );
-        waitKey(0);
+        //imshow("Good Matches", img_matches );
+        //waitKey(0);
+        imwrite("matches.jpg", img_matches);
         return retval;
     }//showMatches
 
@@ -91,6 +95,18 @@ using namespace cv::xfeatures2d;
                 point.x = thisVal.x; point.y = thisVal.y; point.z = thisVal.z;
                 pcloud.push_back(point);
             }//for
+            //put in fake points for camera positions
+            PointT point = PointT(255, 0, 255, 1);//magenta
+            tf2::Vector3 viewPosition;
+            viewPosition = prevxform.getOrigin();
+            point.x = viewPosition[0]; point.y = viewPosition[1]; point.z = viewPosition[2];
+            pcloud.push_back(point);
+            PointT point2 = PointT(0, 255, 255, 1);//cyan
+            viewPosition = xform.getOrigin();
+            point2.x = viewPosition[0]; point2.y = viewPosition[1]; point2.z = viewPosition[2];
+            pcloud.push_back(point2);
+
+
             pcl::io::savePCDFile("testOutput.pcd", pcloud);
 
             prevImage = thisImage.clone();
@@ -223,8 +239,8 @@ using namespace cv::xfeatures2d;
         float array1[32];
         float array2[32];
         for (int i = 0; i < 32; i++){
-            array1[i] = (float) ((i * 23) % 5);
-            array2[i] = (float) ((i * 25) % 6);
+            array1[i] = (float) ((i * 23) % 4);
+            array2[i] = (float) ((i * 25) % 3);
         }//for
         float dotProduct = testCudaFunctionality(array1, array2);
         ROS_INFO("Dot product: %f", dotProduct);

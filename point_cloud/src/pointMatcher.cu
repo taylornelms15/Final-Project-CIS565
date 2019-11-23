@@ -10,7 +10,10 @@
 #include "pointMatcher.h"
 
 
-static float   FoV = 60.0;//known recorded on Google Tango tablet for the office dataset
+//office dataset: recorded on Google Tango tablet
+//the camera's model number: OV4682 RGB IR
+static float    FoV = 131.0;
+//static float    FoV = 120.0;
 
 float* d_A1;
 float* d_A2;
@@ -45,6 +48,22 @@ __global__ void multiplyNumbers(float* A1, float* A2, float* O){
 
 }//multiplyNumbers
 
+/**
+This converts from a space where a positive Z value is "forward from the camera"
+into the space that the rotation wants for our view vector
+*/
+tf2::Vector3 zForwardToOrientation(float X, float Y, float Z){
+    //tf2::Vector3 Da1 = tf2::Vector3(X1, Y1, Z1);
+    //camera moving right, we look towards the -x direction as our Z increases
+    //So, for our construction space, o1=(0,0,0), o2=(1,0,0)
+    //and "forward" for both is around (0,0,1), with "up" at (0,1,0) and "right" at (1,0,0)
+    //we rotate to a world where o1=(0,0,0), o2=(0,0,1)
+    //and "forward" for both is (-1,0,0), with "up" at (0,-1,0) and "right" at (0,0,1)
+    //-Z, X, Y
+    return tf2::Vector3(-Z, X, Y);
+
+}//zForwardToOrientation
+
 PointSub matchTwoPoints(PointSub pt1, 
                         tf2::Transform xform1, 
                         PointSub pt2, 
@@ -62,7 +81,7 @@ PointSub matchTwoPoints(PointSub pt1,
     float aspectRatio = (width * 1.0f) / height;
     percentX1 *= aspectRatio; percentX2 *= aspectRatio;
     //turn these into ray pieces
-    float halftan = glm::tan(fov / 2.0f);
+    float halftan = glm::tan(glm::radians(fov / 2.0f));
     float X1 = percentX1 * halftan; float Y1 = percentY1 * halftan;
     float X2 = percentX2 * halftan; float Y2 = percentY2 * halftan;
     //normalize
@@ -71,10 +90,12 @@ PointSub matchTwoPoints(PointSub pt1,
     float Z1 = 1.0f / len1; X1 /= len1; Y1 /= len1;
     float Z2 = 1.0f / len2; X2 /= len2; Y2 /= len2;
     //make direction vector and transform
-    tf2::Vector3 D1 = tf2::Vector3(X1, Y1, Z1);
-    tf2::Vector3 D2 = tf2::Vector3(X2, Y2, Z2);
-    D1 = xform1(D1);
-    D2 = xform2(D2);
+    //tf2::Vector3 Da1 = tf2::Vector3(X1, Y1, Z1);
+    //tf2::Vector3 Da2 = tf2::Vector3(X2, Y2, Z2);
+    tf2::Vector3 Da1 = zForwardToOrientation(X1, Y1, Z1);
+    tf2::Vector3 Da2 = zForwardToOrientation(X2, Y2, Z2);
+    tf2::Vector3 D1 = xform1(Da1);
+    tf2::Vector3 D2 = xform2(Da2);
     //make glm vectors for position, direction
     tf2::Vector3 o1 = xform1.getOrigin();
     tf2::Vector3 o2 = xform2.getOrigin();
@@ -91,6 +112,7 @@ PointSub matchTwoPoints(PointSub pt1,
     retval.r = pt1.r + pt2.r / 2;
     retval.g = pt1.g + pt2.g / 2;
     retval.b = pt1.b + pt2.b / 2;
+    printf("Distance: %f\n", *distance);
     
 
 
@@ -138,7 +160,7 @@ Converts an (x,y) coordinate to the relevant RGB value in the image
 */
 __host__ Vec3b coordToColor(Mat img, Point2f coord){
     float col = coord.x;
-    float row = img.rows - coord.y;//top-down vs bottom-up conversion
+    float row = coord.y;//img.rows - coord.y;//top-down vs bottom-up conversion
     return img.at<Vec3b>((int)(row + 0.5f), (int)(col + 0.5));
 
 }//coordToColor
@@ -167,11 +189,11 @@ std::vector<PointSub> getMatchingWorldPoints(
     std::vector<PointSub> img2Points = std::vector<PointSub>();//not the actual world points
     printf("==MATCHES==\n");
     for (int i = 0; i < good_matches.size(); i++){
-        KeyPoint img1pt = keypoints1[good_matches[i].queryIdx];
-        KeyPoint img2pt = keypoints1[good_matches[i].trainIdx];
+        KeyPoint img1pt = keypoints1[good_matches[i].trainIdx];
+        KeyPoint img2pt = keypoints2[good_matches[i].queryIdx];
         PointSub pt1, pt2;
-        pt1.x = img1pt.pt.x; pt1.y = img1pt.pt.y;
-        pt2.x = img2pt.pt.x; pt2.y = img2pt.pt.y;
+        pt1.x = img1pt.pt.x; pt1.y = /*img1.rows -*/ img1pt.pt.y;
+        pt2.x = img2pt.pt.x; pt2.y = /*img1.rows -*/ img2pt.pt.y;
         Vec3b col1 = coordToColor(img1, img1pt.pt);
         Vec3b col2 = coordToColor(img2, img2pt.pt);
         pt1.b = col1[0]; pt1.g = col1[1]; pt1.r = col1[2];

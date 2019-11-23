@@ -125,6 +125,7 @@ catkin_package(
 ###########
 
 set(ROS_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "-g")
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
