@@ -25,9 +25,17 @@
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+#include <sensor_msgs/image_encodings.h>
 
 #include <jetson-inference/detectNet.h>
 #include <jetson-utils/cudaMappedMemory.h>
+#include <jetson-utils/imageIO.h>
+
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+
 
 #include "image_converter.h"
 
@@ -64,7 +72,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	// classify the image
 	detectNet::Detection* detections = NULL;
 
-	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_NONE);
+	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_BOX);
 
 	// verify success	
 	if( numDetections < 0 )
@@ -100,6 +108,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 			detMsg.bbox.center.x = cx;
 			detMsg.bbox.center.y = cy;
 
+			
+
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
 			// create classification hypothesis
@@ -107,13 +117,33 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 			
 			hyp.id = det->ClassID;
 			hyp.score = det->Confidence;
+			
+			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
+
+			
 
 			detMsg.results.push_back(hyp);
 			msg.detections.push_back(detMsg);
 		}
 
+		//cvt->Convert(msg.detectionssource_img,sensor_msgs::image_encodings::BGR8);
 		// publish the detection message
 		detection_pub->publish(msg);
+
+//	cv_bridge::CvImagePtr cv_ptr;
+//   try
+//    {
+//      cv_ptr = cv_bridge::toCvCopy(cvt->ImageGPU(), sensor_msgs::image_encodings::RGB8);
+//    }
+//    catch (cv_bridge::Exception& e)
+//    {
+//      ROS_ERROR("cv_bridge exception: %s", e.what());
+//      return;
+//    }
+
+ 	//cv::imshow("Image window", cv_ptr->image);
+	//cv::waitKey(3);   
+
 	}
 }
 
@@ -133,6 +163,8 @@ int main(int argc, char **argv)
 	std::string prototxt_path;
 	std::string model_path;
 	std::string model_name;
+
+cv::namedWindow("Image window");
 
 	bool use_model_name = false;
 
@@ -245,8 +277,8 @@ int main(int argc, char **argv)
 	 */
 	//image_transport::ImageTransport it(nh);	// BUG - stack smashing on TX2?
 	//image_transport::Subscriber img_sub = it.subscribe("image", 1, img_callback);
-	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	ros::Subscriber img_sub = private_nh.subscribe("/camera/rgb/image_raw", 5, img_callback);
+	//ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 
 	/*
 	 * wait for messages

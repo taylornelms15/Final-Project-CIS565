@@ -11,12 +11,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  cv_bridge
   vision_msgs
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -151,6 +152,7 @@ add_executable(${PROJECT_NAME} src/mesh_construct_node.cpp)
  target_link_libraries(
    ${PROJECT_NAME}
    ${catkin_LIBRARIES}
+${OpenCV_LIBS} 
  )
 
 #############

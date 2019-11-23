@@ -4,6 +4,11 @@
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+
    std::vector<std::string> class_descriptions;
    std::string key;
   /**
@@ -45,6 +50,19 @@
 
         // since we got the database from setup we can now see what our bounding box contains!
         ROS_INFO("classified: %s", class_descriptions[idx].c_str());
+
+	cv_bridge::CvImagePtr cv_ptr;
+   try
+    {
+      cv_ptr = cv_bridge::toCvCopy(msg.detections[i].source_img, sensor_msgs::image_encodings::RGB8);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
+cv::imshow("Image window", cv_ptr->image);
+	cv::waitKey(3);  
 
      }
 

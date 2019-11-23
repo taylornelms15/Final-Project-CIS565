@@ -64,7 +64,7 @@ sudo apt-get install -y libpcl-dev ros-melodic-pcl-ros
 We are using some of the non-standard features from OpenCV (specifically, SURF feature detection). As such, we need to compile and build OpenCV from source. [This Link](https://linuxize.com/post/how-to-install-opencv-on-ubuntu-18-04/) shows how to do it; alternatively, follow these steps:
 
 ```bash
-sudo apt-get install -y build-essential cmake git pkg-config libgtk-3-dev
+sudo apt-get install -y build-essential cmake git pkg-config libgtk-3-dev libglm-dev
 sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev
 sudo apt-get install -y libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev libtbb2 libtbb-dev libdc1394-22-dev
 
