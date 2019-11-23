@@ -18,12 +18,11 @@ using namespace cv::xfeatures2d;
     static double                       lastXformTime = -1;
     static tf2::Transform               xform;
     static pcl::PointCloud<PointT> pcloud = pcl::PointCloud<PointT>(); 
-    static float                        FoV = 45.0;//making up a field of view?
 
     static Mat prevImage = Mat();
     static tf2::Transform prevxform;
 
-    void showMatches(Mat img1, Mat img2){
+    std::vector<PointSub> showMatches(Mat img1, Mat img2, tf2::Transform xform1, tf2::Transform xform2){
         //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
         int minHessian = 300;
         Ptr<SURF> detector = SURF::create( minHessian );
@@ -47,12 +46,16 @@ using namespace cv::xfeatures2d;
             }
         }
         //-- Draw matches
+        std::vector<PointSub> retval = getMatchingWorldPoints(img1, keypoints1, xform1,
+                               img2, keypoints2, xform2,
+                               good_matches);
         Mat img_matches;
         drawMatches( img1, keypoints1, img2, keypoints2, good_matches, img_matches, Scalar::all(-1),
                      Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
         //-- Show detected matches
         imshow("Good Matches", img_matches );
         waitKey(0);
+        return retval;
     }//showMatches
 
     void ImageCallback(const sensor_msgs::Image& msg){
@@ -80,10 +83,18 @@ using namespace cv::xfeatures2d;
             prevxform = tf2::Transform(xform);
         }
         else{
-            showMatches(prevImage, thisImage);
 
-            //imshow("Previous", prevImage);
-            //imshow("Current", thisImage);
+            std::vector<PointSub> matchedPoints = showMatches(prevImage, thisImage, prevxform, xform);
+            for(int i = 0; i < matchedPoints.size(); i++){
+                PointSub thisVal = matchedPoints.at(i);
+                PointT point = PointT(thisVal.r, thisVal.g, thisVal.b, 0);
+                point.x = thisVal.x; point.y = thisVal.y; point.z = thisVal.z;
+                pcloud.push_back(point);
+            }//for
+            pcl::io::savePCDFile("testOutput.pcd", pcloud);
+
+            prevImage = thisImage.clone();
+            prevxform = tf2::Transform(xform);
         }//else
 
         //Every 16 frames, put some more points in the cloud  

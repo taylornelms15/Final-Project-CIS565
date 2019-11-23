@@ -9,6 +9,7 @@ set("OpenCV_DIR" "/usr/local/share/opencv4")
 find_package(OpenCV REQUIRED PATHS /usr/local/share)
 find_package(CUDA REQUIRED)
 find_package(PCL 1.3 REQUIRED COMPONENTS common io)
+find_package(glm REQUIRED)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -123,6 +124,8 @@ catkin_package(
 ## Build ##
 ###########
 
+set(ROS_BUILD_TYPE Debug)
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
@@ -137,7 +140,8 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
-set(CUDA_VERBOSE_BUILD ON)
+#set(CUDA_VERBOSE_BUILD ON)
+#-Xcudafe="--diag_suppress=2886" #this, when added to nvcc flags, may suppress some of the bs warnings
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
