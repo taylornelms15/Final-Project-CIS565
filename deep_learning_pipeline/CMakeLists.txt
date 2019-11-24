@@ -46,25 +46,40 @@ set(cudasources
 	cuda_utilities/detectNet.cu
 )
 
-#list(SORT nvidia_files)
+set(detectsources
+	src/node_detectnet.cpp
+	src/image_converter.cpp 
+	inference/ModelImporter.cpp
+	inference/ObjectDetection.cpp
+)
+
+set(cudaheaders
+	cuda_utilites/imageNet.cuh
+	cuda_utilities/detectNet.cuh
+)
+
+list(SORT cudasources)
+list(SORT detectsources)
+
+#source_group(detector FILES ${cudasources} ${detectsources})
 
 # enable c++11 (TensorRT requirement)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-
-#SET(CUDA_NVCC_FLAGS "-arch=sm_72" CACHE STRING "nvcc flags" FORCE)
-SET(CUDA_VERBOSE_BUILD ON CACHE BOOL "nvcc verbose" FORCE)
-SET(LIB_TYPE STATIC)
-CUDA_ADD_LIBRARY(CUDA_UTIL ${LIB_TYPE} ${cudasources})
+list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
+SET(CUDA_NVCC_FLAGS "-arch=sm_53" CACHE STRING "nvcc flags" FORCE)
+set(CUDA_VERBOSE_BUILD ON)
+set(LIB_TYPE STATIC)
+cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 
 
 # inference nodes
 #add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
 #target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
 
-add_executable(detectnet src/node_detectnet.cpp src/image_converter.cpp inference/ModelImporter.cpp inference/ObjectDetection.cpp ${nvidia_files})
-add_dependencies(detectnet CUDA_UTIL)
-target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} jetson-inference CUDA_UTIL)
+add_executable(detectnet ${detectsources} ${headers})
+add_dependencies(detectnet cuda_util)
+target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util jetson-inference)
 
 #add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
 #target_link_libraries(segnet ${catkin_LIBRARIES} jetson-inference)

@@ -615,7 +615,7 @@ void ObjectDetection::sortDetections( Detection* detections, int numDetections )
 
 
 // // from detectNet.cu
-// cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, detectNet::Detection* detections, int numDetections, float4* colors );
+// cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, ObjectDetection::Detection* detections, int numDetections, float4* colors );
 
 // Overlay
 bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )

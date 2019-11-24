@@ -21,7 +21,7 @@
  */
 
 #include <ros/ros.h>
-
+#include <stdio.h>
 /*
 * ROS messages
 */
@@ -33,6 +33,10 @@
 #include <sensor_msgs/Image.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+#include <sensor_msgs/image_encodings.h>
+#include <geometry_msgs/QuaternionStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #include "../nvidia_files/img_write.h"
 #include "../inference/ObjectDetection.h"
@@ -63,7 +67,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input/*, const sensor_msgs::Imu& msg*/ )
+void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr &imu )
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -96,8 +100,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& input/*, const sensor_msgs:
 		{
 			ObjectDetection::Detection* det = detections + n;
 
-			printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
-			printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
+			// printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
+			// printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
 			
 			// create a detection sub-message
 			vision_msgs::Detection2D detMsg;
@@ -122,6 +126,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& input/*, const sensor_msgs:
 			hyp.id = det->ClassID;
 			hyp.score = det->Confidence;
 
+			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
+
 			detMsg.results.push_back(hyp);
 			msg.detections.push_back(detMsg);
 		}
@@ -142,16 +148,49 @@ void img_callback( const sensor_msgs::ImageConstPtr& input/*, const sensor_msgs:
     double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
 	ROS_INFO("===IMAGE %s===", input->header.frame_id.c_str());
     ROS_INFO("\ttime: %9.6f", timeValue2);
-/*	int time_secs = msg.header.stamp.sec;
-    int time_nsecs = msg.header.stamp.nsec;
+	int time_secs = imu->header.stamp.sec;
+    int time_nsecs = imu->header.stamp.nsec;
     double timeValue = time_secs + (1e-9 * time_nsecs);
-	ROS_INFO("===IMU %s===", msg.header.frame_id.c_str());
+	ROS_INFO("===IMU %s===", imu->header.frame_id.c_str());
     ROS_INFO("\ttime: %9.6f", timeValue);
-    ROS_INFO("orientation X: %9.6f", msg.orientation_covariance[0]);
-    ROS_INFO("orientation y: %9.6f", msg.orientation_covariance[1]);
-    ROS_INFO("orientation z: %9.6f", msg.orientation_covariance[2]);
-    ROS_INFO("orientation w: %9.6f", msg.orientation_covariance[3]);
-*/
+
+
+	    ROS_INFO("orientation x: %1.9f", imu->orientation.x);
+    ROS_INFO("orientation y: %1.9f", imu->orientation.y);
+    ROS_INFO("orientation z: %1.9f", imu->orientation.z);
+    ROS_INFO("orientation z: %1.9f", imu->orientation.w);
+
+    ROS_INFO("angular_velocity x: %1.9f", imu->angular_velocity.x);
+    ROS_INFO("angular_velocity y: %1.9f", imu->angular_velocity.y);
+    ROS_INFO("angular_velocity z: %1.9f", imu->angular_velocity.z);
+    // ROS_INFO("angular_velocity z: %1.9f", imu->angular_velocity.w);
+
+    ROS_INFO("linear_acceleration x: %1.9f", imu->linear_acceleration.x);
+    ROS_INFO("linear_acceleration y: %1.9f", imu->linear_acceleration.y);
+    ROS_INFO("linear_acceleration z: %1.9f", imu->linear_acceleration.z);
+    // ROS_INFO("linear_acceleration z: %1.9f", imu->angular_velocity.w);
+
+    for(int i = 0; i < 9; i++)
+    {
+    	ROS_INFO("orientation covariance: %1.9f", imu->orientation_covariance[i]);
+    	ROS_INFO("angular_velocity_covariance : %1.9f", imu->angular_velocity_covariance[i]);
+    	ROS_INFO("linear_acceleration_covariance : %1.9f", imu->linear_acceleration_covariance[i]);
+	}
+}
+
+void imu_callback(const sensor_msgs::Imu::ConstPtr &imu)
+{
+	    ROS_INFO("orientation x: %1.9f", imu->orientation.x);
+    ROS_INFO("orientation y: %1.9f", imu->orientation.y);
+    ROS_INFO("orientation z: %1.9f", imu->orientation.z);
+    ROS_INFO("orientation z: %1.9f", imu->orientation.w);
+
+    for(int i = 0; i < 9; i++)
+    {
+    	ROS_INFO("orientation covariance: %1.9f", imu->orientation_covariance[i]);
+    	ROS_INFO("angular_velocity_covariance : %1.9f", imu->angular_velocity_covariance[i]);
+    	ROS_INFO("linear_acceleration_covariance : %1.9f", imu->linear_acceleration_covariance[i]);
+	}
 }
 
 
@@ -260,20 +299,20 @@ int main(int argc, char **argv)
 	 * subscribe to image topic
 	 */
 	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
-// ros::Subscriber imu_sub = private_nh.subscribe("/image_publisher/image_raw", 5, imu_callback);
+//	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	// ros::Subscriber imu_sub = private_nh.subscribe("/imu0", 5, imu_callback);
 	
 	
-//	message_filters::Subscriber<Image> image_sub(private_nh, "/image_publisher/image_raw", 50);
+	message_filters::Subscriber<Image> image_sub(private_nh, "/camera/rgb/image_raw", 50);
   	
-//	message_filters::Subscriber<Imu> imu_sub(private_nh, "/imu", 50);
+	message_filters::Subscriber<Imu> imu_sub(private_nh, "/imu0", 50);
   	
-//	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
+	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
   	
-//	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub);
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub);
   	// TimeSynchronizer<Image, CameraInfo> sync(image_sub, info_sub, 10);
   	
-//	sync.registerCallback(boost::bind(&img_callback, _1, _2));
+	sync.registerCallback(boost::bind(&img_callback, _1, _2));
 
 	/*
 	 * wait for messages
