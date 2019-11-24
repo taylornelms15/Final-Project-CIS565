@@ -1,7 +1,7 @@
 # Todo
 
-[ ] Get model importer working
-[x] Benchmark original
+'[ ]' Get model importer working
+'[x]' Benchmark original
 [ ] Help Taylor with position
 [ ] Restructure pipeline
 [ ] Image Resizing
