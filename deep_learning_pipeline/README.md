@@ -1,9 +1,9 @@
 # Todo
 
-'[ ]' Get model importer working
-'[x]' Benchmark original
-[ ] Help Taylor with position
-[ ] Restructure pipeline
+* [ ] Get model importer working
+*[x] Benchmark original
+- [ ] Help Taylor with position
+- [ ] Restructure pipeline
 [ ] Image Resizing
 [ ] Get maskrcnn uff model
 [ ] Learn machine learning
