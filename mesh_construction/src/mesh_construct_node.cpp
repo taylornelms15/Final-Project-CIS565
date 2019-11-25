@@ -13,7 +13,10 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/surface/poisson.h>
 #include <pcl/io/obj_io.h>
+#include <pcl/io/vtk_io.h>
 #include <pcl/filters/uniform_sampling.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/surface/mls.h>
 #include <string.h>
 #include <sstream>
 #include <iomanip>
@@ -30,11 +33,9 @@ using namespace tinygltf;
 
 static int iteration = 0;
 
-static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_with_normals = 0;
-static pcl::PointCloud<pcl::PointXYZRGB>::Ptr incoming_cloud = 0;
-static pcl::PointCloud<pcl::Normal>::Ptr normals = 0;
-static pcl::PCLPointCloud2* pcl_to_ros_cloud = 0;
-static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr kdtree = 0;
+//static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals = 0;
+//static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           incoming_cloud = 0;
+//static pcl::PointCloud<pcl::Normal>::Ptr                normals = 0;
 
 std::vector<std::string> class_descriptions;
 std::string key;
@@ -59,7 +60,7 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	// Example code below from http://www.pointclouds.org/documentation/tutorials/greedy_projection.php
 	//
 
-	// Conert to proper format. This destroys the contents of the msg object!
+	// Convert to proper format. This destroys the contents of the msg object!
 	pcl::fromROSMsg(msg, *tmp_cloud);
 	*cloud += *tmp_cloud;
 
@@ -68,10 +69,14 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	if((iteration % 20) == 0) {
 		ROS_INFO("generating output!!");
 		pcl::PolygonMesh mesh;
+		ROS_INFO("Reducing...");
 		ReducePointCloud(cloud);
+		ROS_INFO("Generating Mesh...");
 		PointCloudToMesh(cloud, mesh);
+		ROS_INFO("Writing to output file...");
 		WriteMeshToGLTF(mesh);
 		cloud->clear(); // Don't reuse points after outputting to model once.
+		ROS_INFO("Done!");
 	}
 }
 
@@ -79,8 +84,11 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 {
 	static int mesh_count = 0;
-	std::string filename = "mesh_" + std::to_string(mesh_count++) + ".obj";
-	pcl::io::saveOBJFile(filename, mesh);
+	//std::string filename = "mesh_" + std::to_string(mesh_count++) + ".obj";
+	//pcl::io::saveOBJFile(filename, mesh);
+	// VTK visualizes better.
+	std::string filename = "mesh_" + std::to_string(mesh_count++) + ".vtk";
+	pcl::io::saveVTKFile(filename, mesh);
 }
 
 // Accepts a point cloud and constructs a surface using
@@ -90,21 +98,19 @@ void PointCloudToMesh(
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
 	pcl::PolygonMesh& mesh)
 {
-	static pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
+	static pcl::search::KdTree<pcl::PointXYZRGB>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
-	static pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
-	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+	static pcl::PointCloud<pcl::Normal>::Ptr                normals (new pcl::PointCloud<pcl::Normal>);
+	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
 
-	// Normal estimation
-	pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> n;
-	tree->setInputCloud(cloud);
-	n.setInputCloud(cloud);
-	n.setSearchMethod(tree);
-	n.setKSearch(20);
-	n.compute(*normals);
-
-	// Concatenate the XYZ and normal fields
-	pcl::concatenateFields(*cloud, *normals, *cloud_with_normals);
+	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes. 
+	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
+	mls.setComputeNormals(true);
+	mls.setInputCloud (cloud);
+	mls.setPolynomialOrder (2);
+	mls.setSearchMethod (tree);
+	mls.setSearchRadius (0.1);
+	mls.process(*cloud_with_normals);
 
 	// Create search tree
 	tree2->setInputCloud(cloud_with_normals);
@@ -113,7 +119,7 @@ void PointCloudToMesh(
 	pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
 
 	// Set typical values for the parameters
-	gp3.setSearchRadius(0.025);
+	gp3.setSearchRadius(0.025f);
 	gp3.setMu(2.5);
 	gp3.setMaximumNearestNeighbors (100);
 	gp3.setMaximumSurfaceAngle(M_PI/4);   // 45 degrees
@@ -134,12 +140,21 @@ void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 	// Then filter out points that are identical within +- some range
 
 	// CPU Impl.
+	// Reduce points based on features
 	pcl::UniformSampling<pcl::PointXYZRGB> us;
 	us.setRadiusSearch(0.01f); // Experiment or set to 1/1000 of min/max
 	us.setInputCloud(cloud);
 	us.filter(*cloud);
 
-	// For GPU imple, take UniformSampling code and parallelize by Voxel.
+	// Remove points that produce no meaninful geometries
+	// Can't remove all of them, but this should help with most.
+	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
+	ror.setRadiusSearch(2 * 0.025f);
+	ror.setMinNeighborsInRadius(2);
+	ror.setInputCloud(cloud);
+	ror.filter(*cloud);
+
+	// For GPU impl, take UniformSampling code and parallelize by Voxel.
 	// Straightforward but should provide big improvement.
 }
 
