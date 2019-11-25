@@ -11,5 +11,6 @@
 - [x] Remove dependencies from libraries
 - [ ] Make a dope benchmarker
 - [ ] Scoring system for classification since it may not be 100% accurate
+- [ ] Add streams
 
 sudo apt-get install ros-melodic-robot_localization
