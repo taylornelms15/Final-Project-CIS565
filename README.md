@@ -284,6 +284,8 @@ python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatase
 * [EuRoc MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
   * More Drone footage datasets
 * [Github Link with lists of further datasets](https://github.com/youngguncho/awesome-slam-datasets#unmanned-aerial-vehicle)
+* [Equation for Ray Closest Intersections](http://morroworks.palitri.com/Content/Docs/Rays%20closest%20point.pdf)
+* [Trifocal Tensor Code](https://github.com/cchampet/TrifocalTensor)
 
 
 
