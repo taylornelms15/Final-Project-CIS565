@@ -21,15 +21,8 @@
 #include <sstream>
 #include <iomanip>
 
-
-// Define these only in *one* .cc file.
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-// #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
-#include "tiny_gltf.h"
-
-using namespace tinygltf;
+#define CGLTF_WRITE_IMPLEMENTATION 1
+#include "cgltf_write.h"
 
 static int iteration = 0;
 
@@ -87,8 +80,29 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	//std::string filename = "mesh_" + std::to_string(mesh_count++) + ".obj";
 	//pcl::io::saveOBJFile(filename, mesh);
 	// VTK visualizes better.
-	std::string filename = "mesh_" + std::to_string(mesh_count++) + ".vtk";
+	std::string filename = "mesh_" + std::to_string(mesh_count) + ".vtk";
 	pcl::io::saveVTKFile(filename, mesh);
+
+	cgltf_options options;
+	cgltf_data data; // Member back in C when you could just 0 initialize everything?
+
+	// Add Meshes
+
+	// Add verticies
+	
+	// Populate Vericies buffers as base64 encoded string
+
+	// Add whatever else GLTF will need.
+
+	// Write out to file.
+	std::string gltffilename = "mesh_" + std::to_string(mesh_count) + ".gltf";
+	//cgltf_result result = cgltf_write_file(&options, gltffilename.c_str(), &data);
+	//if (result != cgltf_result_success)
+	//{
+	//	ROS_INFO("Failed to write GLTF output, result was %d", result);
+	//}
+
+	mesh_count++;
 }
 
 // Accepts a point cloud and constructs a surface using

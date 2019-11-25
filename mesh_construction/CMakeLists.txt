@@ -122,7 +122,8 @@ include_directories(
 #  include
   ${catkin_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
-  ./src/ext/tinygltf
+  ./src/ext/tinygltf/
+  ./src/ext/cgltf/
 )
 
 include_directories(${PCL_INCLUDE_DIRS})
