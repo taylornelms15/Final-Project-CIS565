@@ -44,6 +44,9 @@ set(nvidia_files
 set(cudasources
 	cuda_utilities/imageNet.cu 
 	cuda_utilities/detectNet.cu
+  cuda_utilities/cudaOverlay.cu
+  cuda_utilities/cudaResize.cu
+  cuda_utilities/cudaRGB.cu
 )
 
 set(detectsources

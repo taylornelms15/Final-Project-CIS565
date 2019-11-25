@@ -21,6 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+
+#ifndef _CUDA_RGB_H
+#define _CUDA_RGB_H
+
 #include "cudaRGB.h"
 
 //-------------------------------------------------------------------------------------------------------------------------
@@ -239,3 +243,5 @@ cudaError_t cudaRGBA32ToBGR8( float4* srcDev, uchar3* destDev, size_t width, siz
 {
 	return cudaRGBA32ToBGR8(srcDev, destDev, width, height, make_float2(0.0f, 255.0f));
 }
+
+#endif

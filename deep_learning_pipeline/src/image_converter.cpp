@@ -23,7 +23,7 @@
 #include "image_converter.h"
 
 // TODO
-#include <../cuda_utilities/cudaRGB.h>
+#include "../cuda_utilities/cudaRGB.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
 
 #include <ros/ros.h>
