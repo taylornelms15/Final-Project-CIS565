@@ -373,11 +373,12 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	// create our all necessary gGlogger
 	nvinfer1::IBuilder* builder = CREATE_INFER_BUILDER(gLogger);
 
+	// create our network builder which can be used on any model
+	nvinfer1::INetworkDefinition* network = builder->createNetwork();
+
 	//
 	nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
 	nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
-	// create our network builder which can be used on any model
-	nvinfer1::INetworkDefinition* network = builder->createNetwork();
 
 	// set debug flags
 	builder->setDebugSync(TRTEnableDebug);
@@ -402,7 +403,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 		// stuff I learned that ONNX is a fucking mess so likely
 		// version mismatch
 		//
-		if( !parser )
+		if( !onnx_parser )
 		{
 			printf(LOG_TRT "failed to create nvonnxparser::IParser instance\n");
 			return false;
@@ -410,7 +411,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 
 		// if we succeed we can bring in our ONNX model 
 		//
-		if( !parser->parseFromFile(modelFile.c_str(), (int)nvinfer1::ILogger::Severity::kWARNING) )
+		if( !onnx_parser->parseFromFile(modelFile.c_str(), (int)nvinfer1::ILogger::Severity::kWARNING) )
 		{
 			printf(LOG_TRT "failed to parse ONNX model '%s'\n", modelFile.c_str());
 			return false;

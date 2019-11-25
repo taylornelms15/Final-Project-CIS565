@@ -66,60 +66,10 @@ bool saveImageRGBA( const char* filename, float4* cpu, int width, int height, fl
 		}
 	}
 
-	// // determine the file extension
-	// const std::string ext = fileExtension(filename);
-	// const char* extension = ext.c_str();
-
-	// if( ext.size() == 0 )
-	// {
-	// 	printf(LOG_IMAGE "invalid filename or extension, '%s'\n", filename);
-	// 	free(img);
-	// 	return false;
-	// }
-
 	// // save the image
 	int save_result = 0;
 
-	// if( strcasecmp(extension, "jpg") == 0 || strcasecmp(extension, "jpeg") == 0 )
-	// {
 	save_result = stbi_write_jpg(filename, width, height, 4, img, quality);
-	// }
-	// else if( strcasecmp(extension, "png") == 0 )
-	// {
-	// 	// convert quality from 1-100 to 0-9 (where 0 is high quality)
-	// 	quality = (100 - quality) / 10;
-
-	// 	if( quality < 0 )
-	// 		quality = 0;
-		
-	// 	if( quality > 9 )
-	// 		quality = 9;
-
-	// 	stbi_write_png_compression_level = quality;
-
-	// 	// write the PNG file
-	// 	save_result = stbi_write_png(filename, width, height, 4, img, stride);
-	// }
-	// else if( strcasecmp(extension, "tga") == 0 )
-	// {
-	// 	save_result = stbi_write_tga(filename, width, height, 4, img);
-	// }
-	// else if( strcasecmp(extension, "bmp") == 0 )
-	// {
-	// 	save_result = stbi_write_bmp(filename, width, height, 4, img);
-	// }
-	// else if( strcasecmp(extension, "hdr") == 0 )
-	// {
-	// 	save_result = stbi_write_hdr(filename, width, height, 4, (float*)cpu);
-	// }
-	// else
-	// {
-	// 	printf(LOG_IMAGE "invalid extension format '.%s' saving image '%s'\n", extension, filename);
-	// 	printf(LOG_IMAGE "valid extensions are:  JPG/JPEG, PNG, TGA, BMP, and HDR.\n");
-
-	// 	free(img);
-	// 	return false;
-	// }
 
 	// check the return code
 	if( !save_result )

@@ -35,11 +35,11 @@ include_directories(
   ${CUDA_INCLUDE_DIRS}
 )
 
-#set(nvidia_files
-#	nvidia_files/filesystem.cpp
-#	nvidia_files/img_write.cpp
+set(nvidia_files
+	nvidia_files/filesystem.cpp
+	nvidia_files/img_write.cpp
 #	nvidia_files/randInt8Calibrator.cpp
-#)
+)
 
 set(cudasources
 	cuda_utilities/imageNet.cu 
@@ -60,6 +60,7 @@ set(cudaheaders
 
 list(SORT cudasources)
 list(SORT detectsources)
+list(SORT nvidia_files)
 
 #source_group(detector FILES ${cudasources} ${detectsources})
 
@@ -67,7 +68,7 @@ list(SORT detectsources)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
-SET(CUDA_NVCC_FLAGS "-arch=sm_53" CACHE STRING "nvcc flags" FORCE)
+set(CUDA_NVCC_FLAGS "-arch=sm_53" CACHE STRING "nvcc flags" FORCE)
 set(CUDA_VERBOSE_BUILD ON)
 set(LIB_TYPE STATIC)
 cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
@@ -77,13 +78,12 @@ cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 #add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
 #target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
 
-add_executable(detectnet ${detectsources} ${headers})
+add_executable(detectnet ${detectsources} ${headers} ${nvidia_files})
 add_dependencies(detectnet cuda_util)
-target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util jetson-inference)
+target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util )
 
 #add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
 #target_link_libraries(segnet ${catkin_LIBRARIES} jetson-inference)
-
 
 
 # the library we are going to compile (has all of the nodelets in it)

@@ -22,8 +22,12 @@
  
 #include "filesystem.h"
 
+#include <iostream>
 #include <sys/stat.h>
 #include <algorithm>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 // ExecutablePath
 static std::string ExecutablePath()
@@ -69,7 +73,7 @@ static std::string WorkingDirectory()
 std::string absolutePath( const std::string& relative_path )
 {
 	const std::string proc = ExecutableDirectory();
-	std::cout << "file " << proc << ": " proce + relative_path << std::endl;
+	std::cout << "file " << proc << ": " << proc + relative_path << std::endl;
 	return proc + relative_path;
 }
 
