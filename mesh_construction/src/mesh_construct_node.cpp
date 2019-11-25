@@ -83,8 +83,41 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	std::string filename = "mesh_" + std::to_string(mesh_count) + ".vtk";
 	pcl::io::saveVTKFile(filename, mesh);
 
-	cgltf_options options;
-	cgltf_data data; // Member back in C when you could just 0 initialize everything?
+	// Member back in C when you could just 0 initialize everything?
+	cgltf_options options; // Options used for writing the file out or reading one
+	cgltf_data data;       // actual data of the gltf file. This will be converted to JSON.
+
+	// Init header data
+	data.file_type = cgltf_file_type_gltf;
+	data.file_data = NULL;
+	data.asset.copyright = "";
+	data.asset.generator = "";
+	data.asset.version = "";
+	data.asset.min_version = "";
+	data.asset.extras.start_offset = 0;
+	data.asset.extras.end_offset = 0;
+
+	// Init all counts to 0
+	data.meshes_count = 0;
+	data.materials_count = 0;
+	data.accessors_count = 0;
+	data.buffer_views_count = 0;
+	data.buffers_count = 0;
+	data.images_count = 0;
+	data.textures_count = 0;
+	data.samplers_count = 0;
+	data.skins_count = 0;
+	data.cameras_count = 0;
+	data.lights_count = 0;
+	data.nodes_count = 0;
+	data.scenes_count = 0;
+	data.animations_count = 0;
+	data.extensions_used_count = 0;
+	data.extensions_required_count = 0;
+	data.json_size = 0;
+	data.bin_size = 0;
+	data.memory_free = NULL;
+	data.memory_user_data = NULL;
 
 	// Add Meshes
 
@@ -96,11 +129,11 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 
 	// Write out to file.
 	std::string gltffilename = "mesh_" + std::to_string(mesh_count) + ".gltf";
-	//cgltf_result result = cgltf_write_file(&options, gltffilename.c_str(), &data);
-	//if (result != cgltf_result_success)
-	//{
-	//	ROS_INFO("Failed to write GLTF output, result was %d", result);
-	//}
+	cgltf_result result = cgltf_write_file(&options, gltffilename.c_str(), &data);
+	if (result != cgltf_result_success)
+	{
+		ROS_INFO("Failed to write GLTF output, result was %d", result);
+	}
 
 	mesh_count++;
 }
