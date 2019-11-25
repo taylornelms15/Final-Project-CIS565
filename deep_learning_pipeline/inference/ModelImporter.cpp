@@ -373,6 +373,9 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	// create our all necessary gGlogger
 	nvinfer1::IBuilder* builder = CREATE_INFER_BUILDER(gLogger);
 
+	//
+	nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
+	nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
 	// create our network builder which can be used on any model
 	nvinfer1::INetworkDefinition* network = builder->createNetwork();
 
@@ -394,7 +397,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	// create our tensorRt parsor for our onnx model
 	if( TRTModelType == MODEL_ONNX )
 	{
-		nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, gLogger);
 
 		// check that it worked currently after reading lots of ML
 		// stuff I learned that ONNX is a fucking mess so likely
@@ -413,12 +415,10 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 			printf(LOG_TRT "failed to parse ONNX model '%s'\n", modelFile.c_str());
 			return false;
 		}
-		parser->destroy();
 	}
 	else if( TRTModelType == MODEL_UFF )
 	{
 		// create parser instance
-		nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
 		
 		// check that it worked
 		if( !parser )
@@ -448,7 +448,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 			printf(LOG_TRT "failed to parse UFF model '%s'\n", modelFile.c_str());
 			return false;
 		}
-	//	parser->destroy();
 	
 	}
 	else
@@ -561,6 +560,8 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	network->destroy();
 	engine->destroy();
 	builder->destroy();
+	parser->destroy();
+	onnx_parser->destroy();
 
 	printf(LOG_TRT "clean up successful\n");
 

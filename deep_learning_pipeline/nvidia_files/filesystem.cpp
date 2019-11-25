@@ -21,17 +21,54 @@
  */
  
 #include "filesystem.h"
-#include "Process.h"
 
 #include <sys/stat.h>
 #include <algorithm>
 
+// ExecutablePath
+static std::string ExecutablePath()
+{
+	char buf[512];
+	memset(buf, 0, sizeof(buf));	// readlink() does not NULL-terminate
 
+	const ssize_t size = readlink("/proc/self/exe", buf, sizeof(buf));
+
+	if( size <= 0 )
+		return "";
+	
+	return std::string(buf);
+}
+
+
+// ExecutableDirectory
+static std::string ExecutableDirectory()
+{
+	const std::string path = ExecutablePath();
+
+	if( path.length() == 0 )
+		return "";
+
+	return filePath(path);
+}
+
+
+// WorkingDirectory
+static std::string WorkingDirectory()
+{
+	char buf[1024];
+
+	char* str = getcwd(buf, sizeof(buf));
+
+	if( !str )
+		return "";
+
+	return buf;
+}
 
 // absolutePath
 std::string absolutePath( const std::string& relative_path )
 {
-	const std::string proc = Process::ExecutableDirectory();
+	const std::string proc = ExecutableDirectory();
 	std::cout << "file " << proc << ": " proce + relative_path << std::endl;
 	return proc + relative_path;
 }
@@ -53,9 +90,9 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 		return path;
 
 	// add standard search locations
-	locations.push_back(Process::ExecutableDirectory());
+	locations.push_back(ExecutableDirectory());
 
-	std::cout << "ExecutableDirectory " << Process::ExecutableDirectory() << std::endl;
+	std::cout << "ExecutableDirectory " << ExecutableDirectory() << std::endl;
 
 	locations.push_back("/usr/local/bin/");
 	locations.push_back("/usr/local/");
@@ -177,19 +214,19 @@ std::string fileChangeExtension(const std::string& filename, const std::string& 
 // processPath
 std::string processPath()
 {
-	return Process::ExecutablePath();
+	return ExecutablePath();
 }
 
 
 // processDirectory
 std::string processDirectory()
 {
-	return Process::ExecutableDirectory();
+	return ExecutableDirectory();
 }
 
 
 // workingDirectory
 std::string workingDirectory()
 {
-	return Process::WorkingDirectory();
+	return WorkingDirectory();
 }
