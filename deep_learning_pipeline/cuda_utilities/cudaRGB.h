@@ -1,4 +1,3 @@
-  
 /*
  * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
@@ -21,227 +20,107 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef __CUDA_RGB_CONVERT_H
+#define __CUDA_RGB_CONVERT_H
 
-#ifndef _CUDA_RGB_H
-#define _CUDA_RGB_H
 
-#include "cudaRGB.h"
+#include "cudaUtility.h"
+#include <stdint.h>
 
-//-------------------------------------------------------------------------------------------------------------------------
-template<bool isBGR>
-__global__ void RGBToRGBAf(uchar3* srcImage,
-                           float4* dstImage,
-                           int width, int height)
-{
-	const int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-	const int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+//////////////////////////////////////////////////////////////////////////////////
+/// @name 8-bit RGB/BGR to Floating-point RGBA
+/// @ingroup colorspace
+//////////////////////////////////////////////////////////////////////////////////
+
+///@{
 	
-	const int pixel = y * width + x;
+/**
+ * Convert 8-bit fixed-point RGB image to 32-bit floating-point RGBA image
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGB8ToRGBA32( uchar3* input, float4* output, size_t width, size_t height );
 
-	if( x >= width )
-		return; 
+/**
+ * Convert 8-bit fixed-point BGR image to 32-bit floating-point RGBA image
+ * @ingroup colorspace
+ */
+cudaError_t cudaBGR8ToRGBA32( uchar3* input, float4* output, size_t width, size_t height );
 
-	if( y >= height )
-		return;
+///@}
 
-//	printf("cuda thread %i %i  %i %i pixel %i \n", x, y, width, height, pixel);
-		
-	const float  s  = 1.0f;
-	const uchar3 px = srcImage[pixel];
+//////////////////////////////////////////////////////////////////////////////////
+/// @name Floating-point RGBA to 8-bit RGB/RGBA
+/// @ingroup colorspace
+//////////////////////////////////////////////////////////////////////////////////
+
+///@{
+
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point RGB image.
+ * Assumes 0.0-255.0f input range, output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToRGB8( float4* input, uchar3* output, size_t width, size_t height );
+
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point RGB image,
+ * with the floating-point input range specified by the user.  Output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToRGB8( float4* input, uchar3* output, size_t width, size_t height, const float2& inputRange );
+
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point RGBA image.
+ * Assumes 0.0-255.0f input range, output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToRGBA8( float4* input, uchar4* output, size_t width, size_t height );
+
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point RGBA image,
+ * with the floating-point input range specified by the user.  Output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToRGBA8( float4* input, uchar4* output, size_t width, size_t height, const float2& inputRange );
+
+///@}
+
+//////////////////////////////////////////////////////////////////////////////////
+/// @name Floating-point RGBA to 8-bit BGR/BGRA
+/// @ingroup colorspace
+//////////////////////////////////////////////////////////////////////////////////
+
+///@{
 	
-	if( isBGR )
-		dstImage[pixel] = make_float4(px.z * s, px.y * s, px.x * s, 255.0f * s);
-	else
-		dstImage[pixel] = make_float4(px.x * s, px.y * s, px.z * s, 255.0f * s);
-}
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point BGR image.
+ * Assumes 0.0-255.0f input range, output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToBGR8( float4* input, uchar3* output, size_t width, size_t height );
 
-cudaError_t cudaBGR8ToRGBA32( uchar3* srcDev, float4* destDev, size_t width, size_t height )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point BGR image,
+ * with the floating-point input range specified by the user.  Output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToBGR8( float4* input, uchar3* output, size_t width, size_t height, const float2& inputRange );
 
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point BGRA image.
+ * Assumes 0.0-255.0f input range, output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToBGRA8( float4* input, uchar4* output, size_t width, size_t height );
 
-	RGBToRGBAf<true><<<gridDim, blockDim>>>( srcDev, destDev, width, height );
-	
-	return CUDA(cudaGetLastError());
-}
+/**
+ * Convert 32-bit floating-point RGBA image into 8-bit fixed-point BGRA image,
+ * with the floating-point input range specified by the user.  Output range is 0-255.
+ * @ingroup colorspace
+ */
+cudaError_t cudaRGBA32ToBGRA8( float4* input, uchar4* output, size_t width, size_t height, const float2& inputRange );
 
-cudaError_t cudaRGB8ToRGBA32( uchar3* srcDev, float4* destDev, size_t width, size_t height )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
-
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
-
-	RGBToRGBAf<false><<<gridDim, blockDim>>>( srcDev, destDev, width, height );
-	
-	return CUDA(cudaGetLastError());
-}
-
-//-------------------------------------------------------------------------------------------------------------------------
-template<bool isBGRA>
-__global__ void RGBAToRGBA8(float4* srcImage,
-                            uchar4* dstImage,
-                            int width, int height,
-					   float scaling_factor)
-{
-	const int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-	const int y = (blockIdx.y * blockDim.y) + threadIdx.y;
-	
-	const int pixel = y * width + x;
-
-	if( x >= width )
-		return; 
-
-	if( y >= height )
-		return;
-
-	const float4 px = srcImage[pixel];
-
-	if( isBGRA )
-	{
-		dstImage[pixel] = make_uchar4(px.z * scaling_factor, 
-								px.y * scaling_factor, 
-								px.x * scaling_factor,
-								px.w * scaling_factor);
-	}
-	else
-	{
-		dstImage[pixel] = make_uchar4(px.x * scaling_factor, 
-								px.y * scaling_factor, 
-								px.z * scaling_factor,
-								px.w * scaling_factor);
-	}
-}
-
-cudaError_t cudaRGBA32ToRGBA8( float4* srcDev, uchar4* destDev, size_t width, size_t height, const float2& inputRange )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
-
-	if( width == 0 || height == 0 )
-		return cudaErrorInvalidValue;
-
-	const float multiplier = 255.0f / inputRange.y;
-
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
-
-	RGBAToRGBA8<false><<<gridDim, blockDim>>>( srcDev, destDev, width, height, multiplier );
-	
-	return CUDA(cudaGetLastError());
-}
-
-cudaError_t cudaRGBA32ToRGBA8( float4* srcDev, uchar4* destDev, size_t width, size_t height )
-{
-	return cudaRGBA32ToRGBA8(srcDev, destDev, width, height, make_float2(0.0f, 255.0f));
-}
-
-cudaError_t cudaRGBA32ToBGRA8( float4* srcDev, uchar4* destDev, size_t width, size_t height, const float2& inputRange )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
-
-	if( width == 0 || height == 0 )
-		return cudaErrorInvalidValue;
-
-	const float multiplier = 255.0f / inputRange.y;
-
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
-
-	RGBAToRGBA8<true><<<gridDim, blockDim>>>( srcDev, destDev, width, height, multiplier );
-	
-	return CUDA(cudaGetLastError());
-}
-
-cudaError_t cudaRGBA32ToBGRA8( float4* srcDev, uchar4* destDev, size_t width, size_t height )
-{
-	return cudaRGBA32ToBGRA8(srcDev, destDev, width, height, make_float2(0.0f, 255.0f));
-}
-
-
-//-------------------------------------------------------------------------------------------------------------------------
-template<bool isBGR>
-__global__ void RGBAToRGB8(float4* srcImage,
-                           uchar3* dstImage,
-                           int width, int height,
-					  float scaling_factor)
-{
-	const int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-	const int y = (blockIdx.y * blockDim.y) + threadIdx.y;
-	
-	const int pixel = y * width + x;
-
-	if( x >= width )
-		return; 
-
-	if( y >= height )
-		return;
-
-	const float4 px = srcImage[pixel];
-
-	if( isBGR )
-	{
-		dstImage[pixel] = make_uchar3(px.z * scaling_factor, 
-								px.y * scaling_factor, 
-								px.x * scaling_factor);
-	}
-	else
-	{
-		dstImage[pixel] = make_uchar3(px.x * scaling_factor, 
-								px.y * scaling_factor, 
-								px.z * scaling_factor);
-	}
-}
-
-cudaError_t cudaRGBA32ToRGB8( float4* srcDev, uchar3* destDev, size_t width, size_t height, const float2& inputRange )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
-
-	if( width == 0 || height == 0 )
-		return cudaErrorInvalidValue;
-
-	const float multiplier = 255.0f / inputRange.y;
-
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
-
-	RGBAToRGB8<false><<<gridDim, blockDim>>>( srcDev, destDev, width, height, multiplier );
-	
-	return CUDA(cudaGetLastError());
-}
-
-cudaError_t cudaRGBA32ToRGB8( float4* srcDev, uchar3* destDev, size_t width, size_t height )
-{
-	return cudaRGBA32ToRGB8(srcDev, destDev, width, height, make_float2(0.0f, 255.0f));
-}
-
-cudaError_t cudaRGBA32ToBGR8( float4* srcDev, uchar3* destDev, size_t width, size_t height, const float2& inputRange )
-{
-	if( !srcDev || !destDev )
-		return cudaErrorInvalidDevicePointer;
-
-	if( width == 0 || height == 0 )
-		return cudaErrorInvalidValue;
-
-	const float multiplier = 255.0f / inputRange.y;
-
-	const dim3 blockDim(8,8,1);
-	const dim3 gridDim(iDivUp(width,blockDim.x), iDivUp(height,blockDim.y), 1);
-
-	RGBAToRGB8<true><<<gridDim, blockDim>>>( srcDev, destDev, width, height, multiplier );
-	
-	return CUDA(cudaGetLastError());
-}
-
-cudaError_t cudaRGBA32ToBGR8( float4* srcDev, uchar3* destDev, size_t width, size_t height )
-{
-	return cudaRGBA32ToBGR8(srcDev, destDev, width, height, make_float2(0.0f, 255.0f));
-}
+///@}
 
 #endif
