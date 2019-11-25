@@ -24,6 +24,14 @@
 using namespace cv;
 using namespace cv::xfeatures2d;
 
+#define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
+
+/**
+ * Check for CUDA errors; print and exit if there was a problem.
+ */
+void checkCUDAErrorFn(const char *msg, const char *file = NULL, int line = -1);
+
 /**
 Because of difficulties in getting access to PCL functions within the CUDA libraries,
 this class allows us to encapsulate some point functionality without it
@@ -37,6 +45,20 @@ typedef struct PointSub{
     uint8_t b;
     //uint32_t label;
 } PointSub;
+
+
+
+void getCameraIntrinsicMatrix(
+        Mat                     img1,
+        std::vector<KeyPoint>   keypoints1,
+        tf2::Transform          xform1,
+        Mat                     img2,
+        std::vector<KeyPoint>   keypoints2,
+        tf2::Transform          xform2,
+        std::vector<DMatch>     good_matches,
+        Mat*                    output
+);
+
 std::vector<PointSub> getMatchingWorldPoints(
         Mat                     img1,
         std::vector<KeyPoint>   keypoints1,
@@ -44,7 +66,19 @@ std::vector<PointSub> getMatchingWorldPoints(
         Mat                     img2,
         std::vector<KeyPoint>   keypoints2,
         tf2::Transform          xform2,
-        std::vector<DMatch>     good_matches
+        std::vector<DMatch>     good_matches,
+        float                   FoV
+);
+
+std::vector<PointSub> getMatchingWorldPointsAlt(
+        Mat                     img1,
+        std::vector<KeyPoint>   keypoints1,
+        tf2::Transform          xform1,
+        Mat                     img2,
+        std::vector<KeyPoint>   keypoints2,
+        tf2::Transform          xform2,
+        std::vector<DMatch>     good_matches,
+        float                   FoV
 );
 
 /**

@@ -30,6 +30,7 @@
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Transform.h>
 
+#include "TrifocalTensor.hpp"
 #include "pointMatcher.h"
 
     typedef pcl::PointXYZRGBL PointT;

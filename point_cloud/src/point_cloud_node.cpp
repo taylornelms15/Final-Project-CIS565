@@ -1,4 +1,5 @@
 #include "point_cloud_node.h"
+#include <Eigen/Dense>
 
 #define DEBUGOUT 1
 
@@ -8,6 +9,11 @@
 
 using namespace cv;
 using namespace cv::xfeatures2d;
+
+    //office dataset: recorded on Google Tango tablet
+    //the camera's model number: OV4682 RGB IR
+    //const static float    FoV = 131.0;
+    const static float    FoV = 120.0;
 
     const static char imageSubPath[] = "color_image";
     const static char xformSubPath1[] = "T_G_C";//tranformation for color camera
@@ -21,6 +27,139 @@ using namespace cv::xfeatures2d;
 
     static Mat prevImage = Mat();
     static tf2::Transform prevxform;
+
+    static std::deque<Mat> imgqueue = std::deque<Mat>();
+
+    void getKeyPointMatches(Mat img1, Mat img2, std::vector<KeyPoint> *kp1, std::vector<KeyPoint> *kp2, std::vector<DMatch> *matches){
+        //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
+        int minHessian = 700;
+        Ptr<SURF> detector = SURF::create( minHessian );
+        std::vector<KeyPoint> keypoints1, keypoints2;
+        Mat descriptors1, descriptors2;
+        detector->detectAndCompute( img1, noArray(), keypoints1, descriptors1 );
+        detector->detectAndCompute( img2, noArray(), keypoints2, descriptors2 );
+        //-- Step 2: Matching descriptor vectors with a FLANN based matcher
+        // Since SURF is a floating-point descriptor NORM_L2 is used
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+        std::vector< std::vector<DMatch> > knn_matches;
+        matcher->knnMatch( descriptors1, descriptors2, knn_matches, 2 );
+        //-- Filter matches using the Lowe's ratio test
+        const float ratio_thresh = 0.7f;
+        std::vector<DMatch> good_matches;
+        for (size_t i = 0; i < knn_matches.size(); i++)
+        {
+            if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
+            {
+                good_matches.push_back(knn_matches[i][0]);
+            }
+        }
+        *kp1 = std::vector<KeyPoint>(keypoints1);
+        *kp2 = std::vector<KeyPoint>(keypoints2);
+        *matches = std::vector<DMatch>(good_matches);
+    }
+
+    void getKeyPointMatches(Mat img1, Mat img2, Mat img3, 
+            std::vector<KeyPoint> *kp1, std::vector<KeyPoint> *kp2, std::vector<KeyPoint> *kp3, 
+            std::vector<DMatch> *match12, std::vector<DMatch> *match23, std::vector<DMatch> *match31){
+        int minHessian = 700;
+        Ptr<SURF> detector = SURF::create( minHessian );
+        std::vector<KeyPoint> keypoints1, keypoints2, keypoints3;
+        Mat descriptors1, descriptors2, descriptors3;
+        detector->detectAndCompute( img1, noArray(), keypoints1, descriptors1 );
+        detector->detectAndCompute( img2, noArray(), keypoints2, descriptors2 );
+        detector->detectAndCompute( img3, noArray(), keypoints3, descriptors3 );
+        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+        std::vector< std::vector<DMatch> > knn_matches1, knn_matches2, knn_matches3;
+        const float ratio_thresh = 0.7f;
+        std::vector<DMatch> good_matches1, good_matches2, good_matches3;
+        for (size_t i = 0; i < knn_matches1.size(); i++)
+        {
+            if (knn_matches1[i][0].distance < ratio_thresh * knn_matches1[i][1].distance)
+            {
+                good_matches1.push_back(knn_matches1[i][0]);
+            }
+        }
+        for (size_t i = 0; i < knn_matches2.size(); i++)
+        {
+            if (knn_matches2[i][0].distance < ratio_thresh * knn_matches2[i][1].distance)
+            {
+                good_matches2.push_back(knn_matches2[i][0]);
+            }
+        }
+        for (size_t i = 0; i < knn_matches3.size(); i++)
+        {
+            if (knn_matches3[i][0].distance < ratio_thresh * knn_matches3[i][1].distance)
+            {
+                good_matches3.push_back(knn_matches3[i][0]);
+            }
+        }
+
+        *kp1 = std::vector<KeyPoint>(keypoints1);
+        *kp2 = std::vector<KeyPoint>(keypoints2);
+        *kp3 = std::vector<KeyPoint>(keypoints3);
+        *match12 = std::vector<DMatch>(good_matches1);
+        *match23 = std::vector<DMatch>(good_matches2);
+        *match31 = std::vector<DMatch>(good_matches3);
+    }//getKeypointMatches
+
+    std::vector<Vec3i> getGoodIndexSets(std::vector<KeyPoint> keypoints1, std::vector<KeyPoint> keypoints2, std::vector<KeyPoint> keypoints3,
+                                        std::vector<DMatch> match12, std::vector<DMatch> match23, std::vector<DMatch> match31){
+        std::vector<Vec3i> goodIndexSets = std::vector<Vec3i>();//for a matching-triangle, indices into the features for (img1, img2, img3)
+        //log the matches that are good for all three images 
+        for(int i = 0; i < match12.size(); i++){
+            DMatch match1 = match12.at(i);
+            int img1idx = match1.trainIdx;
+            int img2idx = match1.queryIdx;
+            for(int j = 0; j < match23.size(); j++){
+                DMatch match2 = match23.at(j);
+                if (match2.trainIdx = img2idx){
+                    int img3idx = match2.queryIdx;
+                    for(int k = 0; k < match31.size(); k++){
+                        DMatch match3 = match31.at(k);
+                        if (match3.trainIdx == img3idx && match3.queryIdx == img1idx){
+                            goodIndexSets.push_back(Vec3i(img1idx, img2idx, img3idx));
+                            break;//no need to keep searching innermost
+                        }//found a triangle-match
+                    }//for
+                }//if
+            }//for
+        }//for
+        return goodIndexSets;
+    }
+
+    std::vector<PointT> pointsFromTrio(Mat img1, Mat img2, Mat img3, tf2::Transform xform1, tf2::Transform xform2, tf2::Transform xform3){
+
+        std::vector<KeyPoint> keypoints1, keypoints2, keypoints3;
+        std::vector<DMatch> match12, match23, match31;
+        //later development: only calculate key points for the new img, cache the old ones
+        getKeyPointMatches(img1, img2, img3, &keypoints1, &keypoints2, &keypoints3, &match12, &match23, &match31);
+        std::vector<Point2f> img1Points = std::vector<Point2f>();
+        std::vector<Point2f> img2Points = std::vector<Point2f>();
+        std::vector<Point2f> img3Points = std::vector<Point2f>();
+        std::vector<Vec3i> goodIndexSets = getGoodIndexSets(keypoints1, keypoints2, keypoints3, match12, match23, match31);
+        for(int i = 0; i < goodIndexSets.size(); i++){
+            img1Points.push_back(keypoints1[goodIndexSets.at(i)[0]].pt);
+            img2Points.push_back(keypoints2[goodIndexSets.at(i)[1]].pt);
+            img3Points.push_back(keypoints3[goodIndexSets.at(i)[2]].pt);
+        }//for
+        Mat fundamental21 = findFundamentalMat(img1Points, img2Points, FM_RANSAC);
+        Mat fundamental32 = findFundamentalMat(img2Points, img3Points, FM_RANSAC);
+        Mat fundamental31 = findFundamentalMat(img1Points, img3Points, FM_RANSAC);
+
+        //make the Eigen matrices to help contructo our Trifocal Tensor
+        int numListRows = img1Points.size();
+        int numListCols = 3;
+        Eigen::MatrixXd img1List(numListRows, numListCols); 
+        Eigen::MatrixXd img2List(numListRows, numListCols); 
+        Eigen::MatrixXd img3List(numListRows, numListCols); 
+        //x'' = (F31 x) * (F32 x') (this is the fundamental matrix mapping, probably don't use) 
+
+        TrifocalTensor tensor = TrifocalTensor();
+        tensor.computeTensor(img1List, img2List, img3List);
+       
+        return std::vector<PointT>();
+
+    }//pointsFromTrio
 
 
     std::vector<PointSub> showMatches(Mat img1, Mat img2, tf2::Transform xform1, tf2::Transform xform2){
@@ -47,7 +186,7 @@ using namespace cv::xfeatures2d;
             }
         }
         //TODO: remove this line
-        good_matches.resize(10);
+        //good_matches.resize(200);
         //-- Draw matches
         Mat img_matches;
         drawMatches( img1, keypoints1, img2, keypoints2, good_matches, img_matches, Scalar::all(-1),
@@ -56,11 +195,56 @@ using namespace cv::xfeatures2d;
         //imshow("Good Matches", img_matches );
         //waitKey(0);
         imwrite("matches.jpg", img_matches);
-        std::vector<PointSub> retval = getMatchingWorldPoints(img1, keypoints1, xform1,
+        std::vector<PointSub> retval = getMatchingWorldPointsAlt(img1, keypoints1, xform1,
                                img2, keypoints2, xform2,
-                               good_matches);
+                               good_matches,
+                               FoV);
+        /*
+        int maxMatches = 0;
+        float bestFoV = 0.0f;
+        for(int i = 70; i <= 110; i += 2){
+            std::vector<PointSub> candidate = 
+                    getMatchingWorldPoints(img1, keypoints1, xform1,
+                                           img2, keypoints2, xform2,
+                                           good_matches,
+                                           (float) i);
+            printf("\tcandidate fov %d\tmatches: %ld\n", i, candidate.size());
+            if (candidate.size() > maxMatches){
+                bestFoV = (float) i;
+                maxMatches = candidate.size();
+                retval = candidate;
+            }//if
+        }//for a range of FoV values
+        printf("Best point value match: fov %f, number of matches %d\n", bestFoV, maxMatches);
+        */
         return retval;
     }//showMatches
+
+    void makeDirectionOffsetPoint(tf2::Transform transform, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b){
+        tf2::Vector3 direction = tf2::Vector3(x, y, z);
+        tf2::Transform rotation = tf2::Transform(transform.getRotation());
+        tf2::Vector3 p = transform.getOrigin() + rotation(direction);
+        PointT point = PointT(r, g, b, 2);
+        point.x = p[0]; point.y = p[1]; point.z = p[2];
+        pcloud.push_back(point);
+    }//makeDirectionOffsetPoint
+
+    void ImageCallbackAlt(const sensor_msgs::Image& msg){
+#if DEBUGIMAGE
+        ROS_INFO("===IMAGE===");
+#endif
+        int width = msg.width;
+        int height = msg.height;
+        Mat thisImage = Mat(height, width, getEncodingTypeForCV(msg.encoding), (void*) msg.data.data());
+
+        imgqueue.push_back(thisImage.clone());
+        if (imgqueue.size() < 3) return;//if first two images, ignore
+        else if (imgqueue.size() > 3){
+            imgqueue.pop_front();//discard the 4th image back
+        }//else
+        tf2::Transform nullxform = tf2::Transform();
+        std::vector<PointT> resultPoints = pointsFromTrio(imgqueue.at(0), imgqueue.at(1), imgqueue.at(2), nullxform, nullxform, nullxform);
+    }
 
     void ImageCallback(const sensor_msgs::Image& msg){
         if (lastXformTime == xformTime) return;//don't take a new image without new positional data
@@ -78,7 +262,7 @@ using namespace cv::xfeatures2d;
         ROS_INFO("\ttime of last xform: %f", xformTime);
 #endif
 
-        if (imageNumber % 4 != 0){
+        if (imageNumber % 6 != 0){
             return;//only process one image every 4 frames
         }//if
 
@@ -107,20 +291,12 @@ using namespace cv::xfeatures2d;
             pcloud.push_back(point2);
 
             //put our "view" direction points in
-            tf2::Transform prevrotate = tf2::Transform(prevxform.getRotation());
-            tf2::Transform rotate = tf2::Transform(xform.getRotation());
-            viewPosition = tf2::Vector3(0.0005, 0.0, 0.0);
-            tf2::Vector3 viewa1 = prevrotate(viewPosition);
-            tf2::Vector3 view1 = viewa1 + prevxform.getOrigin();
-            point = PointT(0, 255, 0, 2);
-            point.x = view1[0]; point.y = view1[1]; point.z = view1[2];
-            pcloud.push_back(point);
-            tf2::Vector3 viewa2 = rotate(viewPosition);
-            tf2::Vector3 view2 = viewa2 + xform.getOrigin();
-            point = PointT(0, 255, 0, 2);
-            point.x = view2[0]; point.y = view2[1]; point.z = view2[2];
-            pcloud.push_back(point);
-
+            makeDirectionOffsetPoint(prevxform, 0.015, 0.0, 0.0, 255, 0, 0);//x red
+            makeDirectionOffsetPoint(prevxform, 0.0, 0.015, 0.0, 0, 255, 0);//y green
+            makeDirectionOffsetPoint(prevxform, 0.0, 0.0, 0.015, 0, 0, 255);//z blue
+            makeDirectionOffsetPoint(xform, 0.015, 0.0, 0.0, 255, 0, 0);//x red
+            makeDirectionOffsetPoint(xform, 0.0, 0.015, 0.0, 0, 255, 0);//y green
+            makeDirectionOffsetPoint(xform, 0.0, 0.0, 0.015, 0, 0, 255);//z blue
 
             pcl::io::savePCDFile("testOutput.pcd", pcloud);
 
@@ -247,15 +423,18 @@ using namespace cv::xfeatures2d;
       * 
       */
 
-        ros::Subscriber cameraSub = n.subscribe(imageSubPath, 1000, ImageCallback);
+        //ros::Subscriber cameraSub = n.subscribe(imageSubPath, 1000, ImageCallback);
+        ros::Subscriber cameraSub = n.subscribe(imageSubPath, 1000, ImageCallbackAlt);
 
         ros::Subscriber xformColorSub = n.subscribe(xformSubPath1, 1000, TransformCallback);
         //ros::Subscriber xformDepthSub = n.subscribe(xformSubPath2, 1000, TransformCallback);
         float array1[32];
         float array2[32];
         for (int i = 0; i < 32; i++){
-            array1[i] = (float) ((i * 23) % 4);
-            array2[i] = (float) ((i * 25) % 3);
+            array1[i] = 1.0f;
+            array2[i] = 1.0f;
+            //array1[i] = (float) ((i * 23) % 4);
+            //array2[i] = (float) ((i * 25) % 3);
         }//for
         float dotProduct = testCudaFunctionality(array1, array2);
         ROS_INFO("Dot product: %f", dotProduct);
