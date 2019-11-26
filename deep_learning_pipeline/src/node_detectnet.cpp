@@ -31,12 +31,16 @@
 
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/camera_info>
+
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
-#include <sensor_msgs/image_encodings.h>
+
 #include <geometry_msgs/QuaternionStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
+// #include <geometry_msgs/TransformStamped.h>
 
 /*
 *
@@ -70,7 +74,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr &imu )
+void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr &imu, const geometry_msgs::TransformStamped& msg, const sensor_msgs::camera_info& cam )
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -157,44 +161,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 	ROS_INFO("===IMU %s===", imu->header.frame_id.c_str());
     ROS_INFO("\ttime: %9.6f", timeValue);
 
-
-	    ROS_INFO("orientation x: %1.9f", imu->orientation.x);
-    ROS_INFO("orientation y: %1.9f", imu->orientation.y);
-    ROS_INFO("orientation z: %1.9f", imu->orientation.z);
-    ROS_INFO("orientation z: %1.9f", imu->orientation.w);
-
-    ROS_INFO("angular_velocity x: %1.9f", imu->angular_velocity.x);
-    ROS_INFO("angular_velocity y: %1.9f", imu->angular_velocity.y);
-    ROS_INFO("angular_velocity z: %1.9f", imu->angular_velocity.z);
-    // ROS_INFO("angular_velocity z: %1.9f", imu->angular_velocity.w);
-
-    ROS_INFO("linear_acceleration x: %1.9f", imu->linear_acceleration.x);
-    ROS_INFO("linear_acceleration y: %1.9f", imu->linear_acceleration.y);
-    ROS_INFO("linear_acceleration z: %1.9f", imu->linear_acceleration.z);
-    // ROS_INFO("linear_acceleration z: %1.9f", imu->angular_velocity.w);
-
-    for(int i = 0; i < 9; i++)
-    {
-    	ROS_INFO("orientation covariance: %1.9f", imu->orientation_covariance[i]);
-    	ROS_INFO("angular_velocity_covariance : %1.9f", imu->angular_velocity_covariance[i]);
-    	ROS_INFO("linear_acceleration_covariance : %1.9f", imu->linear_acceleration_covariance[i]);
-	}
 }
 
-void imu_callback(const sensor_msgs::Imu::ConstPtr &imu)
-{
-	    ROS_INFO("orientation x: %1.9f", imu->orientation.x);
-    ROS_INFO("orientation y: %1.9f", imu->orientation.y);
-    ROS_INFO("orientation z: %1.9f", imu->orientation.z);
-    ROS_INFO("orientation z: %1.9f", imu->orientation.w);
-
-    for(int i = 0; i < 9; i++)
-    {
-    	ROS_INFO("orientation covariance: %1.9f", imu->orientation_covariance[i]);
-    	ROS_INFO("angular_velocity_covariance : %1.9f", imu->angular_velocity_covariance[i]);
-    	ROS_INFO("linear_acceleration_covariance : %1.9f", imu->linear_acceleration_covariance[i]);
-	}
-}
 
 
 // node main loop
@@ -309,6 +277,10 @@ int main(int argc, char **argv)
 	message_filters::Subscriber<Image> image_sub(private_nh, "/camera/rgb/image_raw", 50);
   	
 	message_filters::Subscriber<Imu> imu_sub(private_nh, "/imu0", 50);
+
+	message_filters::Subscriber<Imu> imu_sub(private_nh, "/tf", 50);
+
+	message_filters::Subscriber<Imu> imu_sub(private_nh, "/camera/depth/camera_info", 50);
   	
 	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
   	
