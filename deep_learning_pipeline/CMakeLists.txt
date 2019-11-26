@@ -33,6 +33,7 @@ set(nvidia_files
 	nvidia_files/filesystem.cpp
 	nvidia_files/img_write.cpp
 	nvidia_files/randInt8Calibrator.cpp
+	nvidia_files/plugins.cpp
 )
 
 set(cudasources
@@ -64,12 +65,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
 # sm was 53
-set(CUDA_NVCC_FLAGS "-arch=sm_53" CACHE STRING "nvcc flags" FORCE)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -gencode arch=compute_53,code=sm_53)
 set(CUDA_VERBOSE_BUILD ON)
-set(LIB_TYPE STATIC)
 cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 
-#include_directories(/usr/include/gstreamer-1.0 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/include /usr/include/glib-2.0 /usr/include/libxml2 /usr/lib/aarch64-linux-gnu/glib-2.0/include/)
+include_directories(/usr/include/gstreamer-1.0 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/include /usr/include/glib-2.0 /usr/include/libxml2 /usr/lib/aarch64-linux-gnu/glib-2.0/include/)
 
 # inference nodes
 #add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
@@ -78,10 +78,14 @@ cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 
 add_executable(detectnet ${detectsources} ${nvidia_files})
 add_dependencies(detectnet cuda_util)
-#add_executable(detectnet ${detectsources})
-target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util jetson-inference)
 
-#target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util nvinfer nvinfer_plugin nvonnxparser nvcaffe_parser jetson-inference)
+#add_executable(detectnet ${detectsources})
+#target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util jetson-inference)
+
+#find_cuda_helper_libs(cublas)
+#set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublas_LIBRARY} ${CUDA_cublas_device_library})
+
+target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util nvinfer nvinfer_plugin nvonnxparser nvcaffe_parser ${CUDA_cublas_LIBRARY})
 
 #opencv_core opencv_calib3d
 #add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
