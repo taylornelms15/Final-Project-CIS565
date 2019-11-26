@@ -4,6 +4,6 @@
 #include "../inference/ObjectDetection.h"
 
 // from detectNet.cu
-cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, ObjectDetection::Detection* detections, int numDetections, float4* colors );
+cudaError_t cudaDetectionOverlay( float4* input, uint32_t width, uint32_t height, ObjectDetection::Detection* detections, int numDetections, float4* colors );
 
 #endif

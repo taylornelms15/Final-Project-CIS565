@@ -12,10 +12,11 @@
 * Tensor RT parsers 
 * These will help us import our models
 */
-#include "NvCaffeParser.h"
-#include "NvOnnxParser.h"
-#include "NvUffParser.h"
-#include "NvInferPlugin.h"
+#include <NvCaffeParser.h>
+#include <NvOnnxParser.h>
+#include <NvUffParser.h>
+#include <NvInferPlugin.h>
+#include <NvInfer.h>
 
 /*
 * For file parsing and caching engine files
@@ -377,8 +378,8 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	nvinfer1::INetworkDefinition* network = builder->createNetwork();
 
 	//
-	nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
-	nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
+	//nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
+//	nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
 
 	// set debug flags
 	builder->setDebugSync(TRTEnableDebug);
@@ -399,6 +400,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	if( TRTModelType == MODEL_ONNX )
 	{
 
+		nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
 		// check that it worked currently after reading lots of ML
 		// stuff I learned that ONNX is a fucking mess so likely
 		// version mismatch
@@ -420,7 +422,7 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	else if( TRTModelType == MODEL_UFF )
 	{
 		// create parser instance
-		
+		nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
 		// check that it worked
 		if( !parser )
 		{
@@ -561,8 +563,8 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	network->destroy();
 	engine->destroy();
 	builder->destroy();
-	parser->destroy();
-	onnx_parser->destroy();
+	// parser->destroy();
+//	onnx_parser->destroy();
 
 	printf(LOG_TRT "clean up successful\n");
 
@@ -581,12 +583,17 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	if( !model_path_ )
 		return false;
 
+
+	// std::cout << "model path " << model_path_ << std::endl;
+
 	printf(LOG_TRT "loading NVIDIA plugins...\n");
 
 	bool loadedPlugins = initLibNvInferPlugins(&gLogger, "");
 
-	if( !loadedPlugins )
+	if( !loadedPlugins ){
 		printf(LOG_TRT "failed to load NVIDIA plugins\n");
+		return 0;
+	}
 	else
 		printf(LOG_TRT "completed loading NVIDIA plugins.\n");
 
@@ -597,6 +604,8 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	const std::string model_path    = locateFile(model_path_);
 	const std::string prototxt_path = locateFile(prototxt_path_ != NULL ? prototxt_path_ : "");
 	
+	std::cout << "model path " << model_path << std::endl;
+
 	const std::string model_ext = fileExtension(model_path_);
 	const modelType   model_fmt = modelTypeFromStr(model_ext.c_str());
 
@@ -652,9 +661,10 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	if( !cache )
 	{
 		printf(LOG_TRT "cache file not found, profiling network model on device %s\n", deviceTypeToStr(device));
+		//std::cout << "model path " << model_path << std::endl;
 		if( model_path.size() == 0 )
 		{
-			printf("\nerror:  model file '%s' was not found.\n", model_path_);
+			printf(LOG_TRT "error:  model file '%s' was not found.\n", model_path_);
 			return 0;
 		}
 

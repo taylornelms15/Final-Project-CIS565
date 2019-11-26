@@ -8,7 +8,6 @@
 #include "../cuda_utilities/cudaMappedMemory.h"
 #include "../cuda_utilities/cudaUtility.h"
 
-#include "../nvidia_files/commandLine.h"
 #include "../nvidia_files/filesystem.h"
 #include <assert.h>
 
@@ -180,14 +179,8 @@ ObjectDetection::NetworkType ObjectDetection::NetworkTypeFromStr( const char* mo
 // Create
 ObjectDetection* ObjectDetection::Create( NetworkType model )
 {
-//	ObjectDetection* net = new ObjectDetection();
-	
-//	if( !net )
-//		return NULL;
-
+	// add if else for type of model
 	return CreateModel( model ); 
-
-//	return net;
 }
 	
 
@@ -537,7 +530,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	// render the overlay
 	if( overlay != 0 && numDetections > 0 )
 	{
-		if( !Overlay(rgba, rgba, width, height, detections, numDetections, overlay) )
+		if( !Overlay(rgba, width, height, detections, numDetections, overlay) )
 			printf(LOG_TRT "detectNet::Detect() -- failed to render overlay\n");
 	}
 	
@@ -614,11 +607,8 @@ void ObjectDetection::sortDetections( Detection* detections, int numDetections )
 }
 
 
-// // from detectNet.cu
-// cudaError_t cudaDetectionOverlay( float4* input, float4* output, uint32_t width, uint32_t height, ObjectDetection::Detection* detections, int numDetections, float4* colors );
-
 // Overlay
-bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )
+bool ObjectDetection::Overlay( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )
 {
 	// PROFILER_BEGIN(PROFILER_VISUALIZE);
 
@@ -631,35 +621,10 @@ bool ObjectDetection::Overlay( float* input, float* output, uint32_t width, uint
 	// bounding box overlay
 	if( flags & OVERLAY_BOX )
 	{
-		if( CUDA_FAILED(cudaDetectionOverlay((float4*)input, (float4*)output, width, height, detections, numDetections, (float4*)TRTClassColors[1])) )
+		if( CUDA_FAILED(cudaDetectionOverlay((float4*)input, width, height, detections, numDetections, (float4*)TRTClassColors[1])) )
 			return false;
 	}
 	
 	// PROFILER_END(PROFILER_VISUALIZE);
 	return true;
-}
-
-
-// SetClassColor
-void ObjectDetection::SetClassColor( uint32_t classIndex, float r, float g, float b, float a )
-{
-	if( classIndex >= GetNumClasses() || !TRTClassColors[0] )
-		return;
-	
-	const uint32_t i = classIndex * 4;
-	
-	TRTClassColors[HOST][i+0] = r;
-	TRTClassColors[HOST][i+1] = g;
-	TRTClassColors[HOST][i+2] = b;
-	TRTClassColors[HOST][i+3] = a;
-}
-
-
-// SetOverlayAlpha
-void ObjectDetection::SetOverlayAlpha( float alpha )
-{
-	const uint32_t numClasses = GetNumClasses();
-
-	for( uint32_t n=0; n < numClasses; n++ )
-		TRTClassColors[HOST][n*4+3] = alpha;
 }

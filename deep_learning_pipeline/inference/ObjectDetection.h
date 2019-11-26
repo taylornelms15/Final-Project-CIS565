@@ -181,7 +181,7 @@ public:
 	 * @param output float4 RGBA output image in CUDA device memory.
 	 * @param detections Array of detections allocated in CUDA device memory.
 	 */
-	bool Overlay( float* input, float* output, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags );
+	bool Overlay( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags );
 	
 	/**
 	 * Retrieve the minimum threshold for detection.

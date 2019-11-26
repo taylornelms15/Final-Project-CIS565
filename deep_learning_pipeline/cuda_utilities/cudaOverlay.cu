@@ -23,11 +23,6 @@
 #include "cudaOverlay.h"
 
 
-/*static inline __device__ __host__ bool eq_less( float a, float b, float epsilon )
-{
-	return (a > (b - epsilon) && a < (b + epsilon)) ? true : false;
-}*/
-
 template<typename T>
 __global__ void gpuRectFill( T* input, T* output, int width, int height,
 					    float4* rects, int numRects, float4 color ) 
@@ -54,9 +49,9 @@ __global__ void gpuRectFill( T* input, T* output, int width, int height,
 		
 		//printf("%i %i %i  %f %f %f %f\n", numRects, x, y, r.x, r.y, r.z, r.w);
 		
-		if( fy >= r.y && fy <= r.w /*&& (eq_less(fx, r.x, ep) || eq_less(fx, r.z, ep))*/ )
+		if( fy >= r.y && fy <= r.w )
 		{
-			if( fx >= r.x && fx <= r.z /*&& (eq_less(fy, r.y, ep) || eq_less(fy, r.w, ep))*/ )
+			if( fx >= r.x && fx <= r.z )
 			{
 				//printf("cuda rect %i %i\n", x, y);
 

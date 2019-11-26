@@ -89,14 +89,18 @@ std::string locateFile( const std::string& path )
 // locateFile
 std::string locateFile( const std::string& path, std::vector<std::string>& locations )
 {
+	std::cout << "path " << path.c_str() << std::endl;
+
 	// check the given path first
-	if( fileExists(path.c_str()) )
+	if( fileExists(path.c_str()) ){
+		std::cout << "returning " <<std::endl;
 		return path;
+	}
 
 	// add standard search locations
 	locations.push_back(ExecutableDirectory());
 
-	std::cout << "ExecutableDirectory " << ExecutableDirectory() << std::endl;
+	//std::cout << "ExecutableDirectory " << ExecutableDirectory() << std::endl;
 
 	locations.push_back("/usr/local/bin/");
 	locations.push_back("/usr/local/");
@@ -105,7 +109,9 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 	locations.push_back("images/");
 	locations.push_back("data/");
 	locations.push_back("/usr/local/bin/images/");
-	locations.push_back("~/CIS565/droneMoM/src/FinalProjectCIS565/ros_deep_learning/");
+	// locations.push_back("~/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data/");
+	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data");
+	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data/");
 
 	// check each location until the file is found
 	const size_t numLocations = locations.size();
@@ -113,9 +119,11 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 	for( size_t n=0; n < numLocations; n++ )
 	{
 		const std::string str = locations[n] + path;
-
-		if( fileExists(str.c_str()) )
+		// std::cout << str <<std::endl;
+		if( fileExists(str.c_str()) ){
+			std::cout << "exists" <<std::endl;
 			return str;
+		}
 	}
 
 	return "";
