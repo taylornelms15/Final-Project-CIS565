@@ -55,37 +55,4 @@ inline bool cudaAllocMapped( void** cpuPtr, void** gpuPtr, size_t size )
 	return true;
 }
 
-
-/**
- * Allocate ZeroCopy mapped memory, shared between CUDA and CPU.
- * @note this overload of cudaAllocMapped returns one pointer,
- *       assumes that the CPU and GPU addresses will match  
- *       (as is the case with any recent CUDA version).
- * @param[out] ptr Returned pointer to the shared CPU/GPU memory.
- * @param[in] size Size (in bytes) of the shared memory to allocate.
- * @returns `true` if the allocation succeeded, `false` otherwise.
- * @ingroup cuda
- */
-inline bool cudaAllocMapped( void** ptr, size_t size )
-{
-	void* cpuPtr = NULL;
-	void* gpuPtr = NULL;
-
-	if( !ptr || size == 0 )
-		return false;
-
-	if( !cudaAllocMapped(&cpuPtr, &gpuPtr, size) )
-		return false;
-
-	if( cpuPtr != gpuPtr )
-	{
-		printf(LOG_CUDA "cudaAllocMapped() - addresses of CPU and GPU pointers don't match\n");
-		return false;
-	}
-
-	*ptr = gpuPtr;
-	return true;
-}
-
-
 #endif
