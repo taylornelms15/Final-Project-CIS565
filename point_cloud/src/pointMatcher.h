@@ -11,15 +11,7 @@
 #include <device_launch_parameters.h>
 #include <cuda_runtime.h>
 
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/LinearMath/Transform.h>
-#include <glm/glm.hpp>
+#include "ptypes.h"
 
 using namespace cv;
 using namespace cv::xfeatures2d;

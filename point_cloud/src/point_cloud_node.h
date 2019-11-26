@@ -7,28 +7,11 @@
 #define POINT_CLOUD_NODE_H
 
 #include <ros/ros.h>
-#include "std_msgs/String.h"
-
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/image_encodings.h>
-#include <geometry_msgs/PointStamped.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <vision_msgs/Detection2DArray.h>
-#include <vision_msgs/VisionInfo.h>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
+#include "ptypes.h"
 #include <pcl/point_types.h>
 #include <pcl/common/projection_matrix.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/point_cloud.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/LinearMath/Transform.h>
 
 #include "TrifocalTensor.hpp"
 #include "pointMatcher.h"

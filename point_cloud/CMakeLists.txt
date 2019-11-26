@@ -164,6 +164,7 @@ set(sources
 )
 
 set(headers
+    src/ptypes.h
     src/point_cloud_node.h
     src/pointMatcher.h
     src/TrifocalTensor.hpp
