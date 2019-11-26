@@ -64,32 +64,17 @@ list(SORT nvidia_files)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
-# sm was 53
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -gencode arch=compute_53,code=sm_53)
 set(CUDA_VERBOSE_BUILD ON)
 cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 
 include_directories(/usr/include/gstreamer-1.0 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/include /usr/include/glib-2.0 /usr/include/libxml2 /usr/lib/aarch64-linux-gnu/glib-2.0/include/)
 
-# inference nodes
-#add_executable(imagenet src/node_imagenet.cpp src/image_converter.cpp)
-#target_link_libraries(imagenet ${catkin_LIBRARIES} jetson-inference)
-
 
 add_executable(detectnet ${detectsources} ${nvidia_files})
 add_dependencies(detectnet cuda_util)
 
-#add_executable(detectnet ${detectsources})
-#target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util jetson-inference)
-
-#find_cuda_helper_libs(cublas)
-#set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublas_LIBRARY} ${CUDA_cublas_device_library})
-
 target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util nvinfer nvinfer_plugin nvonnxparser nvcaffe_parser ${CUDA_cublas_LIBRARY})
-
-#opencv_core opencv_calib3d
-#add_executable(segnet src/node_segnet.cpp src/image_converter.cpp)
-#target_link_libraries(segnet ${catkin_LIBRARIES} jetson-inference)
 
 
 # the library we are going to compile (has all of the nodelets in it)
