@@ -32,15 +32,13 @@
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
-#include <sensor_msgs/camera_info>
+#include <sensor_msgs/CameraInfo.h>
 
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
 
-#include <geometry_msgs/QuaternionStamped.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <geometry_msgs/Vector3Stamped.h>
-// #include <geometry_msgs/TransformStamped.h>
+
 
 /*
 *
@@ -53,8 +51,8 @@
 
 #include <unordered_map>
 
-using namespace sensor_msgs;
 using namespace message_filters;
+
 
 // globals
 ObjectDetection* 	 net = NULL;
@@ -74,7 +72,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr &imu, const geometry_msgs::TransformStamped& msg, const sensor_msgs::camera_info& cam )
+void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr& imu, const sensor_msgs::CameraInfo::ConstPtr& cam,const geometry_msgs::TransformStamped::ConstPtr& tic,const geometry_msgs::TransformStamped::ConstPtr& tgi  )
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -124,15 +122,13 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
-			// 
-			//detMsg.source_img = input;
-
 			// create classification hypothesis
 			vision_msgs::ObjectHypothesisWithPose hyp;
 			
 			hyp.id = det->ClassID;
 			hyp.score = det->Confidence;
 
+			// move this to something else no need to copy the same thing
 			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
 
 			detMsg.results.push_back(hyp);
@@ -150,16 +146,35 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 		detection_pub->publish(msg);
 	}
 
-	int time2_secs = input->header.stamp.sec;
-    int time2_nsecs = input->header.stamp.nsec;
-    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
-	ROS_INFO("===IMAGE %s===", input->header.frame_id.c_str());
-    ROS_INFO("\ttime: %9.6f", timeValue2);
 	int time_secs = imu->header.stamp.sec;
     int time_nsecs = imu->header.stamp.nsec;
     double timeValue = time_secs + (1e-9 * time_nsecs);
 	ROS_INFO("===IMU %s===", imu->header.frame_id.c_str());
     ROS_INFO("\ttime: %9.6f", timeValue);
+    
+	int time2_secs = input->header.stamp.sec;
+    int time2_nsecs = input->header.stamp.nsec;
+    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
+	ROS_INFO("===IMAGE %s===", input->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue2);
+    
+    int time3_secs = cam->header.stamp.sec;
+    int time3_nsecs = cam->header.stamp.nsec;
+    double timeValue3 = time3_secs + (1e-9 * time3_nsecs);
+	ROS_INFO("===CAMERA %s===", cam->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue3);
+	
+	int time4_secs = tic->header.stamp.sec;
+    int time4_nsecs = tic->header.stamp.nsec;
+    double timeValue4 = time4_secs + (1e-9 * time4_nsecs);
+	ROS_INFO("===TIC %s===", tic->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue4);
+
+    int time5_secs = tgi->header.stamp.sec;
+    int time5_nsecs = tgi->header.stamp.nsec;
+    double timeValue5 = time5_secs + (1e-9 * time5_nsecs);
+	ROS_INFO("===TGI %s===", tgi->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue5);
 
 }
 
@@ -273,21 +288,29 @@ int main(int argc, char **argv)
 //	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	// ros::Subscriber imu_sub = private_nh.subscribe("/imu0", 5, imu_callback);
 	
-	
-	message_filters::Subscriber<Image> image_sub(private_nh, "/camera/rgb/image_raw", 50);
+	//
+	message_filters::Subscriber<sensor_msgs::Image> image_sub(private_nh, "/camera/rgb/image_raw", 50);
   	
-	message_filters::Subscriber<Imu> imu_sub(private_nh, "/imu0", 50);
+  	//
+	message_filters::Subscriber<sensor_msgs::Imu> imu_sub(private_nh, "/imu0", 50);
 
-	message_filters::Subscriber<Imu> imu_sub(private_nh, "/tf", 50);
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_sub(private_nh, "/tango/T_I_C_color", 50);
 
-	message_filters::Subscriber<Imu> imu_sub(private_nh, "/camera/depth/camera_info", 50);
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 50);
+
+	//
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 50);
   	
-	typedef sync_policies::ApproximateTime<Image, Imu> MySyncPolicy;
+  	//
+	typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Imu,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
   	
-	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub);
-  	// TimeSynchronizer<Image, CameraInfo> sync(image_sub, info_sub, 10);
+  	//
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub,cam_sub,tic_sub,tgi_sub);
   	
-	sync.registerCallback(boost::bind(&img_callback, _1, _2));
+  	//
+	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5));
 
 	/*
 	 * wait for messages
