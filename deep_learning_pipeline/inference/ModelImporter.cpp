@@ -4,7 +4,6 @@
 #include "ModelImporter.h"
 #include "../nvidia_files/randInt8Calibrator.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
-// #include "../cuda_utilities/cudaResize.h"
 #include "../nvidia_files/filesystem.h"
 
 
