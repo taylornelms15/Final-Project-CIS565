@@ -187,7 +187,7 @@ using namespace cv::xfeatures2d;
         DMatch_vec good_matches;
         getKeyPointMatches(img1, img2, &keypoints1, &keypoints2, &good_matches);
 
-        //get our heature points
+        //get our feature points
         Point2f_vec img1points, img2points;
         std::vector<Point2f_vec> coordVec = coordsFromMatches(keypoints1, keypoints2, good_matches);
         img1points = coordVec[0];
@@ -210,11 +210,21 @@ using namespace cv::xfeatures2d;
         Mat intrinsicK1         = kFromCamInfo(camInfo);
         Mat intrinsicK2         = intrinsicK1.clone();
         Mat R1, R2, P1, P2, Q;
+
+        //testing: guess rotate/translate
+        Mat E;
+        E = findEssentialMat(img1points, img2points, intrinsicK1);
+        Mat Rguess, Tguess;
+        recoverPose(E, img1points, img2points, intrinsicK1, Rguess, Tguess);
+
+        //actual rectify call
         stereoRectify(intrinsicK1, distcoeffs1,//cam 1
                       intrinsicK2, distcoeffs2,//cam 2
                       imgSize,
                       rotMatrix,
+                      //Rguess,
                       transMatrix,
+                      //Tguess,
                       R1, R2, P1, P2, Q);//out matrixes
 
         //triangulate our points
@@ -228,6 +238,18 @@ using namespace cv::xfeatures2d;
                                        triout.at<double>(2, i),
                                        triout.at<double>(3, i));
             results4d.push_back(next);
+        }//for
+
+        for (int i = 0; i < results4d.size(); i++){
+            Point2f loc = img1points[i];
+            Vec3b color = img1.at<Vec3b>(loc);
+            //PointT point = PointT(color[2], color[1], color[0], 0);
+            PointT point = PointT(255, 255, 255, 0);
+            glm::vec4 point4d = results4d[i];
+            point.x = point4d.x / point4d.w * 100000;
+            point.y = point4d.y / point4d.w * 100000;
+            point.z = point4d.z / point4d.w * 100000;
+            retval.push_back(point);
         }//for
 
 
@@ -362,16 +384,32 @@ using namespace cv::xfeatures2d;
 
         imgqueue.push_back(thisImage.clone());
         xformqueue.push_back(xform);
-        if (imgqueue.size() < 6) return;//if first five images, ignore
-        else if (imgqueue.size() > 6){
-            imgqueue.pop_front();//discard the 7th image back
+        if (imgqueue.size() < 12) return;//if first images, ignore
+        else if (imgqueue.size() > 12){
+            imgqueue.pop_front();//discard the last image back
             xformqueue.pop_front();
         }//else
 
         tf2::Transform nullxform = tf2::Transform();
-        std::vector<PointT> resultPoints = pointsFromDuo(imgqueue[0], imgqueue[5], xformqueue[0], xformqueue[5], caminfo);
+        std::vector<PointT> resultPoints = pointsFromDuo(imgqueue[0], imgqueue[11], xformqueue[0], xformqueue[11], caminfo);
         //std::vector<PointT> resultPoints = pointsFromTrio(imgqueue[0], imgqueue[1], imgqueue[2], 
         //                                                  xformqueue[0], xformqueue[1], xformqueue[2]);
+
+        //for(int i = 0; i < resultPoints.size(); i++){
+        //    PointT point = resultPoints[i];
+        //    pcloud.push_back(point);
+        //}//for
+
+        makeDirectionOffsetPoint(xformqueue[0], 0.0, 0.0, 0.0, 255, 0, 255);//c magenta
+        makeDirectionOffsetPoint(xformqueue[11], 0.0, 0.0, 0.0, 0, 255, 255);//c cyan
+        makeDirectionOffsetPoint(xformqueue[0], 0.015, 0.0, 0.0, 255, 0, 0);//x red
+        makeDirectionOffsetPoint(xformqueue[0], 0.0, 0.015, 0.0, 0, 255, 0);//y green
+        makeDirectionOffsetPoint(xformqueue[0], 0.0, 0.0, 0.015, 0, 0, 255);//z blue
+        makeDirectionOffsetPoint(xformqueue[11], 0.015, 0.0, 0.0, 255, 0, 0);//x red
+        makeDirectionOffsetPoint(xformqueue[11], 0.0, 0.015, 0.0, 0, 255, 0);//y green
+        makeDirectionOffsetPoint(xformqueue[11], 0.0, 0.0, 0.015, 0, 0, 255);//z blue
+        pcl::io::savePCDFile("testOutput.pcd", pcloud);
+        return;
     }
 
     void ImageCallback(const sensor_msgs::Image& msg){
