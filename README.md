@@ -77,7 +77,6 @@ cd ceres-solver
 mkdir build && cd build
 cmake ..
 make -j4
-make test
 sudo make install
 ```
 Now we can get all the openCV parts together:
