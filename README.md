@@ -67,7 +67,22 @@ We are using some of the non-standard features from OpenCV (specifically, SURF f
 sudo apt-get install -y build-essential cmake git pkg-config libgtk-3-dev libglm-dev
 sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev
 sudo apt-get install -y libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev libtbb2 libtbb-dev libdc1394-22-dev
+sudo apt-get install -y libeigen3-dev libgflags-dev libgoogle-glog-dev libsuitesparse-dev libatlas-base-dev
+```
+We need to install the Ceres solver as well before we get openCV up and running:
 
+```bash
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver
+mkdir build && cd build
+cmake ..
+make -j4
+make test
+sudo make install
+```
+Now we can get all the openCV parts together:
+
+```bash
 mkdir ~/opencv_build && cd ~/opencv_build
 git clone https://github.com/opencv/opencv.git
 git clone https://github.com/opencv/opencv_contrib.git
