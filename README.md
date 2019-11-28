@@ -3,6 +3,7 @@
 
 - [Problem Statement](#Problem-Statement)
 - [Repo Structure](#Repo-Structure) 
+- [Design](#Design)
 - [Build Instructions](#Build-Instructions)
 
 
