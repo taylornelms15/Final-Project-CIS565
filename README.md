@@ -8,6 +8,12 @@
 
 ## Problem Statement
 
+Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can create 3D models in real time?
+
+## Repo Structure
+
+This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
+
 ## Build Instructions
 
 ### Do not clone this repo until the instructions tell you to.
