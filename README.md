@@ -3,6 +3,7 @@
 
 - [Problem Statement](#Problem-Statement)
 - [Repo Structure](#Repo-Structure) 
+- [Project Overview](#Project-Overview)
 - [Design](#Design)
 - [Results](#Results)
 - [Build Instructions](#Build-Instructions)
@@ -18,13 +19,17 @@ This repository is laid out in the following manner. The top level README lays o
 
 ## Project Overview?
 
-ROS is heavily used in research. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. This also lets us 
+ROS is heavily used in research. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
 
 ## Design
 
 add picture of pipeline 
 
 The first step in our pipeline is to classify the important objects in a scene. This is done for two reasons. Reason 1 is that we need to be able to give a description of what objects are in a scene. The second reason is that we can give boundingboxes to the point cloud on where to focus in on. Point cloud computation is expensive so this is one way of optimizing. Only generate a point cloud in regions where we are interested in. after the point cloud is generated we can then render a 3d mesh!
+
+## Results
+
+add results of system here results of components are in READmes of the components
 
 ## Build Instructions
 
