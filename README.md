@@ -45,7 +45,7 @@ Once you are logged onto your jetson continue.
 
 ### ROS Core
 
-These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
+Luckily tensorRT comes pre installed on the jetpack. We just need to insteall a few extra plugins for streaming 
 
 ```bash
 cd ~
