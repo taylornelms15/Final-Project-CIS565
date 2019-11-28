@@ -15,7 +15,15 @@ Collecting 3D object datasets involves a large amount of manual work and is time
 
 This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
+## Project Overview?
+
+ROS is heavily used in research. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. This also lets us 
+
 ## Design
+
+add picture of pipeline 
+
+The first step in our pipeline is to classify the important objects in a scene. This is done for two reasons. Reason 1 is that we need to be able to give a description of what objects are in a scene. The second reason is that we can give boundingboxes to the point cloud on where to focus in on. Point cloud computation is expensive so this is one way of optimizing. Only generate a point cloud in regions where we are interested in. after the point cloud is generated we can then render a 3d mesh!
 
 ## Build Instructions
 
