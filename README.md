@@ -20,13 +20,12 @@ These ROS nodes use the DNN objects from the jetson-inference project (aka Hello
 ```bash
 cd ~
 sudo apt-get install git cmake
-git clone --recursive https://github.com/dusty-nv/jetson-inference
-cd jetson-inference
-mkdir build
-cd build
-cmake ../
-make
-sudo make install
+sudo apt-get update
+sudo apt-get install -y dialog
+sudo apt-get install -y libglew-dev glew-utils libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+sudo apt-get install -y libopencv-calib3d-dev libopencv-dev 
+sudo apt-get update
+
 ```
 
 Install the `ros-melodic-ros-base`package on your Jetson following [these](
