@@ -113,12 +113,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+#catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES point_cloud
 #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs
 #  DEPENDS system_lib
-)
+#)
 
 ###########
 ## Build ##

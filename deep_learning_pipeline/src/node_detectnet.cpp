@@ -21,29 +21,41 @@
  */
 
 #include <ros/ros.h>
+#include <stdio.h>
+/*
+* ROS messages
+*/
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
+#include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/CameraInfo.h>
+
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
-#include <sensor_msgs/image_encodings.h>
 
-#include <jetson-inference/detectNet.h>
-#include <jetson-utils/cudaMappedMemory.h>
-#include <jetson-utils/imageIO.h>
+#include <geometry_msgs/TransformStamped.h>
 
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/core.hpp>
 
+/*
+*
+*/ 
+#include "../nvidia_files/img_write.h"
+#include "../inference/ObjectDetection.h"
+#include "../cuda_utilities/cudaMappedMemory.h"
 
 #include "image_converter.h"
 
 #include <unordered_map>
 
+using namespace message_filters;
+
 
 // globals
-detectNet* 	 net = NULL;
+ObjectDetection* 	 net = NULL;
 imageConverter* cvt = NULL;
 
 ros::Publisher* detection_pub = NULL;
@@ -60,7 +72,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input )
+void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::Imu::ConstPtr& imu, const sensor_msgs::CameraInfo::ConstPtr& cam,const geometry_msgs::TransformStamped::ConstPtr& tic,const geometry_msgs::TransformStamped::ConstPtr& tgi  )
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -70,9 +82,9 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 	}
 
 	// classify the image
-	detectNet::Detection* detections = NULL;
+	ObjectDetection::Detection* detections = NULL;
 
-	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, detectNet::OVERLAY_BOX);
+	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, ObjectDetection::OVERLAY_BOX);
 
 	// verify success	
 	if( numDetections < 0 )
@@ -91,10 +103,10 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 
 		for( int n=0; n < numDetections; n++ )
 		{
-			detectNet::Detection* det = detections + n;
+			ObjectDetection::Detection* det = detections + n;
 
-			printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
-			printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
+			// printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
+			// printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
 			
 			// create a detection sub-message
 			vision_msgs::Detection2D detMsg;
@@ -108,8 +120,6 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 			detMsg.bbox.center.x = cx;
 			detMsg.bbox.center.y = cy;
 
-			
-
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
 			// create classification hypothesis
@@ -117,35 +127,57 @@ void img_callback( const sensor_msgs::ImageConstPtr& input )
 			
 			hyp.id = det->ClassID;
 			hyp.score = det->Confidence;
-			
-			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
 
-			
+			// move this to something else no need to copy the same thing
+			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
 
 			detMsg.results.push_back(hyp);
 			msg.detections.push_back(detMsg);
 		}
 
-		//cvt->Convert(msg.detectionssource_img,sensor_msgs::image_encodings::BGR8);
+		if( numDetections > 3 )
+		{
+			if( !saveImageRGBA("file.jpg", (float4*)cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), 255.0f) )
+				printf("failed saving %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
+			else	
+				printf("successfully wrote %ix%i image to 'file'\n", cvt->GetWidth(), cvt->GetHeight());
+		}
 		// publish the detection message
 		detection_pub->publish(msg);
-
-//	cv_bridge::CvImagePtr cv_ptr;
-//   try
-//    {
-//      cv_ptr = cv_bridge::toCvCopy(cvt->ImageGPU(), sensor_msgs::image_encodings::RGB8);
-//    }
-//    catch (cv_bridge::Exception& e)
-//    {
-//      ROS_ERROR("cv_bridge exception: %s", e.what());
-//      return;
-//    }
-
- 	//cv::imshow("Image window", cv_ptr->image);
-	//cv::waitKey(3);   
-
 	}
+
+	int time_secs = imu->header.stamp.sec;
+    int time_nsecs = imu->header.stamp.nsec;
+    double timeValue = time_secs + (1e-9 * time_nsecs);
+	ROS_INFO("===IMU %s===", imu->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue);
+   
+	int time2_secs = input->header.stamp.sec;
+    int time2_nsecs = input->header.stamp.nsec;
+    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
+	ROS_INFO("===IMAGE %s===", input->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue2);
+    
+    int time3_secs = cam->header.stamp.sec;
+    int time3_nsecs = cam->header.stamp.nsec;
+    double timeValue3 = time3_secs + (1e-9 * time3_nsecs);
+	ROS_INFO("===CAMERA %s===", cam->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue3);
+	
+	int time4_secs = tic->header.stamp.sec;
+    int time4_nsecs = tic->header.stamp.nsec;
+    double timeValue4 = time4_secs + (1e-9 * time4_nsecs);
+	ROS_INFO("===TIC %s===", tic->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue4);
+
+    int time5_secs = tgi->header.stamp.sec;
+    int time5_nsecs = tgi->header.stamp.nsec;
+    double timeValue5 = time5_secs + (1e-9 * time5_nsecs);
+	ROS_INFO("===TGI %s===", tgi->header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue5);
+
 }
+
 
 
 // node main loop
@@ -156,64 +188,39 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh;
 	ros::NodeHandle private_nh("~");
 
-	/*
-	 * retrieve parameters
-	 */
-	std::string class_labels_path;
-	std::string prototxt_path;
-	std::string model_path;
+	// std::string class_labels_path;
+	// std::string prototxt_path;
+	// std::string model_path;
 	std::string model_name;
 
-cv::namedWindow("Image window");
 
-	bool use_model_name = false;
-
-	// determine if custom model paths were specified
-	if( !private_nh.getParam("prototxt_path", prototxt_path) ||
-	    !private_nh.getParam("model_path", model_path) )
-	{
-		// without custom model, use one of the built-in pretrained models
-		private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
-		use_model_name = true;
-	}
+	// default parameter is to use the ssd mobilenet
+	private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
 
 	// set mean pixel and threshold defaults
 	float mean_pixel = 0.0f;
 	float threshold  = 0.5f;
 	
+	//
 	private_nh.param<float>("mean_pixel_value", mean_pixel, mean_pixel);
 	private_nh.param<float>("threshold", threshold, threshold);
 
+	//
+	ObjectDetection::NetworkType model = ObjectDetection::NetworkTypeFromStr(model_name.c_str());
 
-	/*
-	 * load object detection network
-	 */
-	if( use_model_name )
+	// 
+	if( model == ObjectDetection::ERROR )
 	{
-		// determine which built-in model was requested
-		detectNet::NetworkType model = detectNet::NetworkTypeFromStr(model_name.c_str());
-
-		if( model == detectNet::CUSTOM )
-		{
-			ROS_ERROR("invalid built-in pretrained model name '%s', defaulting to pednet", model_name.c_str());
-			model = detectNet::PEDNET;
-		}
-
-		// create network using the built-in model
-		net = detectNet::Create(model);
+		ROS_ERROR("unknown model\n");
+		return 0;
 	}
-	else
-	{
-		// get the class labels path (optional)
-		private_nh.getParam("class_labels_path", class_labels_path);
 
-		// create network using custom model paths
-		net = detectNet::Create(prototxt_path.c_str(), model_path.c_str(), mean_pixel, class_labels_path.c_str(), threshold);
-	}
+	// create network
+	net = ObjectDetection::Create(model);
 
 	if( !net )
 	{
-		ROS_ERROR("failed to load detectNet model");
+		ROS_ERROR("failed to load model exiting!\n");
 		return 0;
 	}
 
@@ -239,14 +246,16 @@ cv::namedWindow("Image window");
 	std::string class_key = std::string("class_labels_") + std::to_string(model_hash);
 	private_nh.setParam(class_key, class_descriptions);
 		
-	// populate the vision info msg
+	// 
 	std::string node_namespace = private_nh.getNamespace();
 	ROS_INFO("node namespace => %s", node_namespace.c_str());
 
+	//
 	info_msg.database_location = node_namespace + std::string("/") + class_key;
 	info_msg.database_version  = 0;
 	info_msg.method 		  = net->GetModelPath();
 	
+	//
 	ROS_INFO("class labels => %s", info_msg.database_location.c_str());
 
 
@@ -275,10 +284,33 @@ cv::namedWindow("Image window");
 	/*
 	 * subscribe to image topic
 	 */
-	//image_transport::ImageTransport it(nh);	// BUG - stack smashing on TX2?
-	//image_transport::Subscriber img_sub = it.subscribe("image", 1, img_callback);
-	ros::Subscriber img_sub = private_nh.subscribe("/camera/rgb/image_raw", 5, img_callback);
-	//ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
+//	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
+	// ros::Subscriber imu_sub = private_nh.subscribe("/imu0", 5, imu_callback);
+	
+	//
+	message_filters::Subscriber<sensor_msgs::Image> image_sub(private_nh, "/camera/rgb/image_raw", 50);
+  	
+  	//
+	message_filters::Subscriber<sensor_msgs::Imu> imu_sub(private_nh, "/imu0", 50);
+
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_sub(private_nh, "/tango/T_I_C_color", 50);
+
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 50);
+
+	//
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 50);
+  	
+  	//
+	typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Imu,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
+  	
+  	//
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, imu_sub,cam_sub,tic_sub,tgi_sub);
+  	
+  	//
+	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5));
 
 	/*
 	 * wait for messages

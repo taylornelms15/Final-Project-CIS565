@@ -29,7 +29,6 @@
 
    }
 
-   // this is registered every image sent
    void DetectionCallback(const vision_msgs::Detection2DArray& msg)
    {
       // print stuff to show how stuff works
@@ -61,8 +60,8 @@
       ROS_ERROR("cv_bridge exception: %s", e.what());
       return;
     }
-cv::imshow("Image window", cv_ptr->image);
-	cv::waitKey(3);  
+    cv::imshow("Image window", cv_ptr->image);
+    cv::waitKey(3);  
 
      }
 
