@@ -6,19 +6,21 @@
 - [Build Instructions](#Build-Instructions)
 
 
+## 
+
 ## Build Instructions
 
-## Do not clone this repo until the instructions tell you to.
+# Do not clone this repo until the instructions tell you to.
 
 you need to build a ROS workspace first...
 
-## Installation
+# Installation
 
 First, install the latest [JetPack](https://developer.nvidia.com/embedded/jetpack) on your Jetson (JetPack 4.2.2 for ROS Melodic or JetPack 3.3 for ROS Kinetic on TX1/TX2).
 
 Once you are logged onto your jetson continue.
 
-### ROS Core
+# ROS Core
 
 These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
 
@@ -55,7 +57,7 @@ For our project we will need some additional nodes. Install the necessary depend
 sudo apt-get install -y ros-melodic-image-transport ros-melodic-image-publisher ros-melodic-vision-msgs ros-melodic-tf2
 ```
 
-### PCL
+# PCL
 
 Execute the following commands to install the PCL libraries:
 
@@ -63,7 +65,7 @@ Execute the following commands to install the PCL libraries:
 sudo apt-get install -y libpcl-dev ros-melodic-pcl-ros
 ```
 
-### OpenCV Advanced features
+# OpenCV Advanced features
 
 We are using some of the non-standard features from OpenCV (specifically, SURF feature detection). As such, we need to compile and build OpenCV from source. [This Link](https://linuxize.com/post/how-to-install-opencv-on-ubuntu-18-04/) shows how to do it; alternatively, follow these steps:
 
@@ -87,7 +89,7 @@ sudo make install
 ```
 This process may take a little bit to complete.
 
-#### Create Workspace
+# Create Workspace
 
 Now you must make the catkin workspace or your DroneMoM workspace. How ever you like to think about it.
 
@@ -107,11 +109,11 @@ Ensure that the path from the echo output matches your path. Assuming you are ru
 
 `/home/youruser/CIS565/droneMoM_ws/src:/opt/ros/melodic/share`
 
-### Clone
+# Clone
 
 Now you can clone this repo into the src folder of your newly crated ROS workspace!
 
-### Build 
+# Build 
 
 navigate to your workspace so `~/CIS565/droneMoM_ws`
 
@@ -119,7 +121,7 @@ and type `catkin_make` This will build everything. Ensure there are no errors. R
 
 That is it! Now you have ROS running and can make your ROS nodes.
 
-### Test 
+# Test 
 
 open 4 terminals.
 
@@ -151,7 +153,7 @@ This is a sample app that gets messages fro mthe detectnet
 source devel/setup.bash
 rosrun point_cloud point_cloud
 ```
-### Running ROS bag
+# Running ROS bag
 
 you will first need to download a ros bag. Download the machine hall 01 ros bag [here](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
 
@@ -183,7 +185,7 @@ you should see the point could ros node print data as well as the bag. to see wh
 rosbag info <your bag>
 ```
 
-#### Downloading the MIT Dataset 
+# Downloading the MIT Dataset 
 
 I've set up a python script for downloading a subsection of the mit dataset. You may need to run the following commands to get it to run:
 ```
@@ -203,7 +205,7 @@ This will download all the relevant files to a given directory root. Example usa
 python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatasetData/clover/yawConstant/maxSpeed2p0/ -o../Datasets/Clover/maxSpeed2p0/
 ```
 
-### References
+# References
 
 * [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
   * Huge dump of drone data for processing
