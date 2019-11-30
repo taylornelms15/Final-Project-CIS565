@@ -20,15 +20,14 @@
 #include <string.h>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
+#include <fstream>
 
 #define CGLTF_WRITE_IMPLEMENTATION 1
+#define CGLTF_IMPLEMENTATION 1
 #include "cgltf_write.h"
 
 static int iteration = 0;
-
-//static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals = 0;
-//static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           incoming_cloud = 0;
-//static pcl::PointCloud<pcl::Normal>::Ptr                normals = 0;
 
 std::vector<std::string> class_descriptions;
 std::string key;
@@ -73,6 +72,12 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	}
 }
 
+template<typename T>
+size_t vectorsizeof(const typename std::vector<T>& vec)
+{
+    return sizeof(T) * vec.size();
+}
+
 // Takes an input mesh and writes it to a file with an incrementing ID
 void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 {
@@ -82,19 +87,25 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	// VTK visualizes better.
 	std::string filename = "mesh_" + std::to_string(mesh_count) + ".vtk";
 	pcl::io::saveVTKFile(filename, mesh);
+	
+	// Generate filenames now to populate GLTF data strcutures
+	std::string basename = "mesh_" + std::to_string(mesh_count);
+	std::string gltfFileName = basename + ".gltf";
+	std::string binFileName = basename + ".bin";
 
 	// Member back in C when you could just 0 initialize everything?
 	cgltf_options options; // Options used for writing the file out or reading one
 	cgltf_data data;       // actual data of the gltf file. This will be converted to JSON.
 
 	// Init header data
+	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#introduction
 	data.file_type = cgltf_file_type_gltf;
 	data.file_data = NULL;
-	data.asset.copyright = "";
-	data.asset.generator = "";
-	data.asset.version = "";
-	data.asset.min_version = "";
-	data.asset.extras.start_offset = 0;
+	data.asset.copyright = "2019";            // Who knows
+	data.asset.generator = "DroneMOM";        // DroneMOM is generating this
+	data.asset.version = "2.0";               // Conform to GLTF 2.0 Spec.
+	data.asset.min_version = NULL;              // No min version specified, is null enough?
+	data.asset.extras.start_offset = 0;       // No extras, so start and end offset is 0.
 	data.asset.extras.end_offset = 0;
 
 	// Init all counts to 0
@@ -119,19 +130,181 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	data.memory_free = NULL;
 	data.memory_user_data = NULL;
 
-	// Add Meshes
+	///////////////////////////////////////////////////
+	// Buffers
+	// 0 - Indicies
+	// 1 - position + normal;s
+	cgltf_buffer* buffers = (cgltf_buffer*)malloc(sizeof(cgltf_buffer));
+	// mesh.cloud.data -> Vector of unsigned char
+	// mesh.polygons -> Vector of Vectors of 3 unsigned int
+	uint32_t INDICES_COUNT = mesh.polygons.size() * 3;
+	uint32_t VERTICES_COUNT = mesh.cloud.data.size();
+	uint32_t INDICES_LEN = (INDICES_COUNT * sizeof(unsigned int));
+	uint32_t VERTICES_LEN = (VERTICES_COUNT * sizeof(unsigned char));
+	buffers[0].size = INDICES_LEN + VERTICES_LEN;
+	buffers[0].uri = &binFileName[0];
+	// Store the buffers in our parent
+	data.buffers_count = 1;
+	data.buffers = buffers;
 
-	// Add verticies
+	///////////////////////////////////////////////////
+	// Buffer Views
+	// view 0 - indices
+	// view 1 - position + normals
+	cgltf_buffer_view* views = (cgltf_buffer_view*)malloc(sizeof(cgltf_buffer_view) * 2);
+	// Indices
+	views[0].buffer = &buffers[0];
+	views[0].offset = 0;
+	views[0].size = INDICES_LEN;
+	views[0].stride = 0;  // Must remain undefined
+	views[0].type = cgltf_buffer_view_type_indices;
+	// Position + Normals
+	views[1].buffer = &buffers[0];
+	views[1].offset = INDICES_LEN;
+	views[1].size = VERTICES_LEN;
+	views[1].stride = mesh.cloud.point_step;
+	views[1].type = cgltf_buffer_view_type_vertices;
+	// Store buffer views in parent
+	data.buffer_views_count = 2;
+	data.buffer_views = views;
+
+	///////////////////////////////////////////////////
+	// Accessors
+	// acc 0 - indicies
+	// acc 1 - position
+	// acc 2 - normals
+	cgltf_accessor* accessors = (cgltf_accessor*)malloc(sizeof(cgltf_accessor) * 3);
+	// Indicies
+	accessors[0].component_type = cgltf_component_type_r_32u;
+	accessors[0].normalized = 0;
+	accessors[0].type = cgltf_type_scalar;
+	accessors[0].offset = 0;
+	accessors[0].count = INDICES_COUNT; // TODO: Is this right?
+	accessors[0].stride = 0; // Must remain undefined
+	accessors[0].buffer_view = &views[0];
+	accessors[0].has_min = 0;
+	accessors[0].has_max = 0;
+	accessors[0].is_sparse = 0;
+	// Positions
+	accessors[1].component_type = cgltf_component_type_r_32f;
+	accessors[1].normalized = 0;
+	accessors[1].type = cgltf_type_vec3;
+	accessors[1].offset = 0;
+	accessors[1].count = mesh.cloud.row_step / mesh.cloud.point_step; // TODO: Is this right?
+	accessors[1].stride = mesh.cloud.point_step;
+	accessors[1].buffer_view = &views[1];
+	accessors[1].has_min = 1;
+	accessors[1].min[0] = 0;
+	accessors[1].min[1] = 0;
+	accessors[1].min[2] = 0;
+	accessors[1].has_max = 1;
+	accessors[1].max[0] = 65535;
+	accessors[1].max[1] = 65535;
+	accessors[1].max[2] = 65535;
+	accessors[1].is_sparse = 0;
+	// Normals
+	accessors[2].component_type = cgltf_component_type_r_32f;
+	accessors[2].normalized = 0;
+	accessors[2].type = cgltf_type_vec3;
+	accessors[2].offset = 12;
+	accessors[2].count = mesh.cloud.row_step / mesh.cloud.point_step; // TODO: Is this right?
+	accessors[2].stride = mesh.cloud.point_step;
+	accessors[2].buffer_view = &views[1];
+	accessors[2].has_min = 0;
+	accessors[2].has_max = 0;
+	accessors[2].is_sparse = 0;
+	// Sore accessors in parent
+	data.accessors_count = 3;
+	data.accessors = accessors;
 	
-	// Populate Vericies buffers as base64 encoded string
+	///////////////////////////////////////////////////
+	// Attributes
+	// 0 - Position
+	// 1 - Normals
+	cgltf_attribute* attributes = (cgltf_attribute*)malloc(sizeof(cgltf_attribute) * 2);
+	// Position
+	attributes[0].name = "POSITION";
+	attributes[0].type = cgltf_attribute_type_position;
+	attributes[0].index = 1;
+	attributes[0].data = &accessors[1];
+	// Normals
+	attributes[1].name = "NORMAL";
+	attributes[1].type = cgltf_attribute_type_normal;
+	attributes[1].index = 2;
+	attributes[1].data = &accessors[2];
 
-	// Add whatever else GLTF will need.
+	///////////////////////////////////////////////////
+	// Primitives
+	// 1 - Triangles
+	cgltf_primitive* prim = (cgltf_primitive*)malloc(sizeof(cgltf_primitive));
+	prim[0].type = cgltf_primitive_type_triangles;
+	prim[0].indices = &accessors[0];
+	prim[0].material = NULL;
+	prim[0].attributes = attributes;
+	prim[0].attributes_count = 2;
+	prim[0].targets = NULL;
+	prim[0].targets_count = 0;
 
+	///////////////////////////////////////////////////
+	// Mesh
+	cgltf_mesh* gltfmesh = (cgltf_mesh*)malloc(sizeof(cgltf_mesh));
+	gltfmesh[0].name = "mesh";
+	gltfmesh[0].primitives = prim;
+	gltfmesh[0].primitives_count = 1;
+	gltfmesh[0].weights = NULL;
+	gltfmesh[0].weights_count = 0;
+	gltfmesh[0].target_names = NULL;
+	gltfmesh[0].target_names_count = 0;
+	data.meshes = gltfmesh;
+	data.meshes_count = 1;
+
+	///////////////////////////////////////////////////
+	// Node
+	cgltf_node* node = (cgltf_node*)malloc(sizeof(cgltf_node));
+	node[0].name = "node";
+	node[0].parent = NULL;
+	node[0].children = NULL;
+	node[0].children_count = 0;
+	node[0].skin = NULL;
+	node[0].mesh = gltfmesh;
+	node[0].camera = NULL;
+	node[0].light = NULL;
+	node[0].weights = NULL;
+	node[0].weights_count = 0;
+	node[0].has_translation = 0;
+	node[0].has_rotation = 0;
+	node[0].has_scale = 0;
+	node[0].has_matrix = 0;
+	data.nodes = node;
+	data.nodes_count = 1;
+	
+	///////////////////////////////////////////////////
+	// Scene
+	cgltf_scene* scene = (cgltf_scene*)malloc(sizeof(cgltf_scene));
+	scene[0].name = "scene";
+	scene[0].nodes = &node;
+	scene[0].nodes_count = 1;
+	data.scenes = scene;
+	data.scenes_count = 1;
+	data.scene = NULL;
+
+	///////////////////////////////////////////////////
 	// Write out to file.
-	std::string gltffilename = "mesh_" + std::to_string(mesh_count) + ".gltf";
-	cgltf_result result = cgltf_write_file(&options, gltffilename.c_str(), &data);
-	if (result != cgltf_result_success)
-	{
+	// Write Binary Data
+	std::ofstream binFile(binFileName);
+	for(const auto& e : mesh.polygons) {
+		for(const auto& f : e.vertices) {
+			binFile << f;
+		}
+	}
+	for(const auto& e : mesh.cloud.data) {
+		binFile << e;
+	}
+	binFile.close();
+	
+	// Write GLTF File
+	cgltf_result result = cgltf_write_file(&options, gltfFileName.c_str(), &data);
+	if (result != cgltf_result_success) {
 		ROS_INFO("Failed to write GLTF output, result was %d", result);
 	}
 
