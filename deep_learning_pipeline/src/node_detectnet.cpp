@@ -38,6 +38,7 @@
 #include <vision_msgs/VisionInfo.h>
 
 #include <geometry_msgs/TransformStamped.h>
+//#include <drone_mom_msgs/drone_mom>
 
 
 /*
@@ -98,8 +99,11 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 	{
 		ROS_INFO("detected %i objects in %ux%u image", numDetections, input->width, input->height);
 		
+		//
+		drone_mom_msgs::drone_mom msg;
+		
 		// create a detection for each bounding box
-		vision_msgs::Detection2DArray msg;
+		//vision_msgs::Detection2DArray msg;
 
 		for( int n=0; n < numDetections; n++ )
 		{
@@ -132,7 +136,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input, const sensor_msgs::I
 			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
 
 			detMsg.results.push_back(hyp);
-			msg.detections.push_back(detMsg);
+			msg.classification.detections.push_back(detMsg);
 		}
 
 		if( numDetections > 3 )
@@ -274,7 +278,7 @@ int main(int argc, char **argv)
 	/*
 	 * advertise publisher topics
 	 */
-	ros::Publisher pub = private_nh.advertise<vision_msgs::Detection2DArray>("detections", 25);
+	ros::Publisher pub = private_nh.advertise<drone_mom_msgs::drone_mom>("detections", 25);
 	detection_pub = &pub; // we need to publish from the subscriber callback
 
 	// the vision info topic only publishes upon a new connection

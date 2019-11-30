@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   vision_msgs
   std_msgs
+  drone_mom_msgs
 )
 
 find_package(OpenCV REQUIRED)

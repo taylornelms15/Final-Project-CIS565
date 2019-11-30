@@ -47,9 +47,6 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 		return path;
 	}
 
-	// add standard search locations
-	locations.push_back(ExecutableDirectory());
-
 
 	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data");
 	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data/");
