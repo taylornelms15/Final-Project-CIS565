@@ -9,6 +9,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 
+#include <drone_mom_msgs/drone_mom.h>
    std::vector<std::string> class_descriptions;
    std::string key;
   /**
@@ -29,11 +30,12 @@
 
    }
 
-   void DetectionCallback(const vision_msgs::Detection2DArray& msg)
+   void DetectionCallback(const drone_mom_msgs::drone_mom& msg1)
    {
       // print stuff to show how stuff works
      // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
-     int detected_elements = msg.detections.size();
+     int detected_elements = msg1.classification.detections.size();
+     vision_msgs::Detection2DArray msg = msg1.classification;
      for(int i = 0; i < detected_elements; i++)
      {
         ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);

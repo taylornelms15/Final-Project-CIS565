@@ -38,9 +38,7 @@
 #include <vision_msgs/VisionInfo.h>
 
 #include <geometry_msgs/TransformStamped.h>
-//#include <drone_mom_msgs/drone_mom>
-
-
+#include <drone_mom_msgs/drone_mom.h>
 /*
 *
 */ 

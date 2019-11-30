@@ -15,11 +15,21 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(CUDA REQUIRED)
 
+
+# add custom msg
+#add_message_files(
+#
+# DIRECTORY ../drone_mom_msgs/msg
+# FILES drone_mom.msg
+#)
+
+
 # define catkin package
 catkin_package(
     LIBRARIES ros_deep_learning_nodelets
-    CATKIN_DEPENDS nodelet roscpp image_transport sensor_msgs
+    CATKIN_DEPENDS nodelet roscpp image_transport sensor_msgs drone_mom_msgs
 )
+
 
 # include paths
 include_directories(
@@ -66,11 +76,11 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -gencode arch=compute_53,code=sm_53)
 set(CUDA_VERBOSE_BUILD ON)
 cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 
-include_directories(/usr/include/gstreamer-1.0 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/include /usr/include/glib-2.0 /usr/include/libxml2 /usr/lib/aarch64-linux-gnu/glib-2.0/include/)
+include_directories(/usr/include/gstreamer-1.0 /usr/lib/aarch64-linux-gnu/gstreamer-1.0/include /usr/include/glib-2.0 /usr/include/libxml2 /usr/lib/aarch64-linux-gnu/glib-2.0/include/ ${catkin_INCLUDE_DIRS})
 
 
 add_executable(detectnet ${detectsources} ${nvidia_files})
-add_dependencies(detectnet cuda_util)
+add_dependencies(detectnet cuda_util ${catkin_EXPORTED_TARGETS} drone_mom_msgs)
 
 target_link_libraries(detectnet ${catkin_LIBRARIES} ${OpenCV_LIBS} cuda_util nvinfer nvinfer_plugin nvonnxparser nvcaffe_parser ${CUDA_cublas_LIBRARY})
 

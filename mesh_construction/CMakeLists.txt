@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   cv_bridge
   vision_msgs
+  drone_mom_msgs
 )
 
 ## System dependencies are found with CMake's conventions
