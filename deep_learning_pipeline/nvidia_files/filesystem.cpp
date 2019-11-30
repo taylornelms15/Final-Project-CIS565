@@ -29,54 +29,6 @@
 #include <string.h>
 #include <unistd.h>
 
-// ExecutablePath
-static std::string ExecutablePath()
-{
-	char buf[512];
-	memset(buf, 0, sizeof(buf));	// readlink() does not NULL-terminate
-
-	const ssize_t size = readlink("/proc/self/exe", buf, sizeof(buf));
-
-	if( size <= 0 )
-		return "";
-	
-	return std::string(buf);
-}
-
-
-// ExecutableDirectory
-static std::string ExecutableDirectory()
-{
-	const std::string path = ExecutablePath();
-
-	if( path.length() == 0 )
-		return "";
-
-	return filePath(path);
-}
-
-
-// WorkingDirectory
-static std::string WorkingDirectory()
-{
-	char buf[1024];
-
-	char* str = getcwd(buf, sizeof(buf));
-
-	if( !str )
-		return "";
-
-	return buf;
-}
-
-// absolutePath
-std::string absolutePath( const std::string& relative_path )
-{
-	const std::string proc = ExecutableDirectory();
-	std::cout << "file " << proc << ": " << proc + relative_path << std::endl;
-	return proc + relative_path;
-}
-
 
 // locateFile
 std::string locateFile( const std::string& path )
@@ -143,39 +95,6 @@ bool fileExists( const char* path, bool regularFilesOnly )
 }
 
 
-// fileSize
-size_t fileSize( const char* path )
-{
-	if( !path )
-		return 0;
-
-	struct stat fileStat;
-
-	const int result = stat(path, &fileStat);
-
-	if( result == -1 )
-	{
-		printf("%s does not exist.\n", path);
-		return 0;
-	}
-
-	//printf("%s  size %zu bytes\n", path, (size_t)fileStat.st_size);
-	return fileStat.st_size;
-}
-
-
-// filePath
-std::string filePath( const std::string& filename )
-{
-	const std::string::size_type slashIdx = filename.find_last_of("/");
-
-	if( slashIdx == std::string::npos || slashIdx == 0 )
-		return filename;
-
-	return filename.substr(0, slashIdx + 1);
-}
-
-
 // fileExtension
 std::string fileExtension( const std::string& path )
 {
@@ -186,46 +105,3 @@ std::string fileExtension( const std::string& path )
 	return ext;
 }
 
-
-// fileRemoveExtension
-std::string fileRemoveExtension( const std::string& filename )
-{
-	const std::string::size_type dotIdx   = filename.find_last_of(".");
-	const std::string::size_type slashIdx = filename.find_last_of("/");
-
-    if( dotIdx == std::string::npos )
-		return filename;
-
-	if( slashIdx != std::string::npos && dotIdx < slashIdx )
-		return filename;
-
-    return filename.substr(0, dotIdx);
-}
-
-
-// fileChangeExtension
-std::string fileChangeExtension(const std::string& filename, const std::string& newExtension)  
-{
-	return fileRemoveExtension(filename).append(newExtension);
-}
-
-
-// processPath
-std::string processPath()
-{
-	return ExecutablePath();
-}
-
-
-// processDirectory
-std::string processDirectory()
-{
-	return ExecutableDirectory();
-}
-
-
-// workingDirectory
-std::string workingDirectory()
-{
-	return WorkingDirectory();
-}

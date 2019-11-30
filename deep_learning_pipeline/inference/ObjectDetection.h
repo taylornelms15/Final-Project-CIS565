@@ -152,34 +152,17 @@ public:
 	virtual ~ObjectDetection();
 
 	/**
-	 * Detect object locations from an RGBA image, returning an array containing the detection results.
-	 * @param[in]  input float4 RGBA input image in CUDA device memory.
-	 * @param[in]  width width of the input image in pixels.
-	 * @param[in]  height height of the input image in pixels.
-	 * @param[out] detections pointer that will be set to array of detection results (residing in shared CPU/GPU memory)
-	 * @param[in]  overlay bitwise OR combination of overlay flags (@see OverlayFlags and @see Overlay()), or OVERLAY_NONE.
 	 * @returns    The number of detected objects, 0 if there were no detected objects, and -1 if an error was encountered.
 	 */
 	int Detect( float* input, uint32_t width, uint32_t height, Detection** detections, uint32_t overlay=OVERLAY_BOX );
 	
 	/**
-	 * Detect object locations in an RGBA image, into an array of the results allocated by the user.
-	 * @param[in]  input float4 RGBA input image in CUDA device memory.
-	 * @param[in]  width width of the input image in pixels.
-	 * @param[in]  height height of the input image in pixels.
-	 * @param[out] detections pointer to user-allocated array that will be filled with the detection results.
-	 *                        @see GetMaxDetections() for the number of detection results that should be allocated in this buffer.
-	 * @param[in]  overlay bitwise OR combination of overlay flags (@see OverlayFlags and @see Overlay()), or OVERLAY_NONE.
 	 * @returns    The number of detected objects, 0 if there were no detected objects, and -1 if an error was encountered.
 	 */
 	int Detect( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t overlay=OVERLAY_BOX );
 	
 	/**
 	 * Draw the detected bounding boxes overlayed on an RGBA image.
-	 * @note Overlay() will automatically be called by default by Detect(), if the overlay parameter is true 
-	 * @param input float4 RGBA input image in CUDA device memory.
-	 * @param output float4 RGBA output image in CUDA device memory.
-	 * @param detections Array of detections allocated in CUDA device memory.
 	 */
 	bool Overlay( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags );
 	

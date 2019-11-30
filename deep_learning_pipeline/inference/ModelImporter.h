@@ -1,19 +1,11 @@
-/*
-*
-*/
  
 #ifndef __TENSOR_NET_H__
 #define __TENSOR_NET_H__
 
-// fix
-// forward declaration of IInt8Calibrator
 namespace nvinfer1 { class IInt8Calibrator; }
 
 // includes
 #include <NvInfer.h>
-
-// #include <jetson-utils/cudaUtility.h>
-// #include <jetson-utils/timespec.h>
 
 #include <vector>
 #include <sstream>
