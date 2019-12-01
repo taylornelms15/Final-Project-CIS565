@@ -2,16 +2,32 @@
 #define __PROFILER_H__
 
 
-inline void create_events();
+
+/**
+ * Enumeration for queries
+ */
+enum profilertype
+{
+	INFERENCE_BEGIN =0,
+	INFERENCE_END,
+	PREPROCESS_BEGIN,
+	PREPROCESS_END,
+	POSTPROCESS_BEGIN,
+	POSTPROCESS_END,
+	NUM_PROFILERS
+};
 
 
-inline void profiler_begin(profilertype type, cudaStream_t stream=0);
+void create_events();
 
 
-inline void profiler_end(profilertype type, cudaStream_t stream=0);
+void profiler_begin(profilertype type, cudaStream_t stream=0);
 
 
-inline void destroy_events();
+void profiler_end(profilertype type, cudaStream_t stream=0);
+
+
+void destroy_events();
 
 
 #endif

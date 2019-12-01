@@ -131,7 +131,7 @@ set(utils
 	utils/img_write.cpp
 	utils/randInt8Calibrator.cpp
 	utils/plugins.cpp
-  utils/profiler.cpp
+  	utils/profiler.cpp
 )
 
 set(cudasources
