@@ -4,6 +4,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+#include <pcl/common/common.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -16,6 +17,9 @@
 #include <pcl/io/vtk_io.h>
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/surface/organized_fast_mesh.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/surface/marching_cubes_hoppe.h>
 #include <pcl/surface/mls.h>
 #include <string.h>
 #include <sstream>
@@ -34,10 +38,10 @@ std::string key;
 
 // Forward Decl.
 void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
-void WriteMeshToGLTF(pcl::PolygonMesh& mesh);
+void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
 void PointCloudToMesh(
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-	pcl::PolygonMesh& mesh);
+	pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
 
 // this is registered every image sent
 void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
@@ -61,35 +65,37 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	if((iteration % 20) == 0) {
 		ROS_INFO("generating output!!");
 		pcl::PolygonMesh mesh;
+		pcl::PointXYZRGBNormal min;
+		pcl::PointXYZRGBNormal max;
+		
 		ROS_INFO("Reducing...");
 		ReducePointCloud(cloud);
+		
 		ROS_INFO("Generating Mesh...");
-		PointCloudToMesh(cloud, mesh);
+		PointCloudToMesh(cloud, mesh, min, max);
+		
 		ROS_INFO("Writing to output file...");
-		WriteMeshToGLTF(mesh);
-		cloud->clear(); // Don't reuse points after outputting to model once.
+		WriteMeshToGLTF(mesh, min, max);
+		
 		ROS_INFO("Done!");
+		cloud->clear(); // Don't reuse points after outputting to model once.
 	}
 }
 
-template<typename T>
-size_t vectorsizeof(const typename std::vector<T>& vec)
-{
-    return sizeof(T) * vec.size();
-}
-
 // Takes an input mesh and writes it to a file with an incrementing ID
-void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
+void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max)
 {
 	static int mesh_count = 0;
+	
+	std::string basename = "mesh_" + std::to_string(mesh_count);
+	
 	//std::string filename = "mesh_" + std::to_string(mesh_count++) + ".obj";
 	//pcl::io::saveOBJFile(filename, mesh);
 	// VTK visualizes better.
-	std::string filename = "mesh_" + std::to_string(mesh_count) + ".vtk";
-	pcl::io::saveVTKFile(filename, mesh);
+	std::string vtkfilename = basename + ".vtk";
+	pcl::io::saveVTKFile(vtkfilename, mesh);
 	
 	// Generate filenames now to populate GLTF data strcutures
-	std::string basename = "mesh_" + std::to_string(mesh_count);
 	std::string gltfFileName = basename + ".gltf";
 	std::string binFileName = basename + ".bin";
 
@@ -146,6 +152,9 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	// Store the buffers in our parent
 	data.buffers_count = 1;
 	data.buffers = buffers;
+	
+	std::cout << "INDICES_COUNT: " << INDICES_COUNT << std::endl;
+	std::cout << "VERTICES_COUNT: " << VERTICES_COUNT << std::endl;
 
 	///////////////////////////////////////////////////
 	// Buffer Views
@@ -194,13 +203,13 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	accessors[1].stride = mesh.cloud.point_step;
 	accessors[1].buffer_view = &views[1];
 	accessors[1].has_min = 1;
-	accessors[1].min[0] = 0;
-	accessors[1].min[1] = 0;
-	accessors[1].min[2] = 0;
+	accessors[1].min[0] = min.x;
+	accessors[1].min[1] = min.y;
+	accessors[1].min[2] = min.z;
 	accessors[1].has_max = 1;
-	accessors[1].max[0] = 65535;
-	accessors[1].max[1] = 65535;
-	accessors[1].max[2] = 65535;
+	accessors[1].max[0] = max.x;
+	accessors[1].max[1] = max.y;
+	accessors[1].max[2] = max.z;
 	accessors[1].is_sparse = 0;
 	// Normals
 	accessors[2].component_type = cgltf_component_type_r_32f;
@@ -272,7 +281,13 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	node[0].weights = NULL;
 	node[0].weights_count = 0;
 	node[0].has_translation = 0;
-	node[0].has_rotation = 0;
+	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#coordinate-system-and-units
+	// https://www.ros.org/reps/rep-0103.html
+	node[0].has_rotation = 0; // ROS to GLTF rotation.
+	node[0].rotation[0] = -1.5708; // x (rads)
+	node[0].rotation[1] = -1.5708; // y (rads)
+	node[0].rotation[2] =  0.0; // z (rads)
+	node[0].rotation[3] =  1.0; // w (scalar) (rads)
 	node[0].has_scale = 0;
 	node[0].has_matrix = 0;
 	data.nodes = node;
@@ -286,20 +301,16 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 	scene[0].nodes_count = 1;
 	data.scenes = scene;
 	data.scenes_count = 1;
-	data.scene = NULL;
+	data.scene = NULL; 
 
 	///////////////////////////////////////////////////
 	// Write out to file.
 	// Write Binary Data
 	std::ofstream binFile(binFileName);
 	for(const auto& e : mesh.polygons) {
-		for(const auto& f : e.vertices) {
-			binFile << f;
-		}
+		binFile.write((char*)&e.vertices[0], e.vertices.size() * sizeof(std::uint32_t));
 	}
-	for(const auto& e : mesh.cloud.data) {
-		binFile << e;
-	}
+	binFile.write((char*)&mesh.cloud.data[0], mesh.cloud.data.size() * sizeof(unsigned char));
 	binFile.close();
 	
 	// Write GLTF File
@@ -316,66 +327,77 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh)
 // to see what is most performant (plus what is best ported to GPU).
 void PointCloudToMesh(
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-	pcl::PolygonMesh& mesh)
+	pcl::PolygonMesh& mesh,
+	pcl::PointXYZRGBNormal& min,
+	pcl::PointXYZRGBNormal& max)
 {
 	static pcl::search::KdTree<pcl::PointXYZRGB>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
 	static pcl::PointCloud<pcl::Normal>::Ptr                normals (new pcl::PointCloud<pcl::Normal>);
 	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
 	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes. 
-	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
-	mls.setComputeNormals(true);
-	mls.setInputCloud (cloud);
-	mls.setPolynomialOrder (2);
-	mls.setSearchMethod (tree);
-	mls.setSearchRadius (0.1);
-	mls.process(*cloud_with_normals);
-
-	// Create search tree
-	tree2->setInputCloud(cloud_with_normals);
+	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGB> mls;
+	tree->setInputCloud(cloud);
+	mls.setComputeNormals(false);
+	mls.setInputCloud(cloud);
+	mls.setPolynomialOrder(2);
+	mls.setSearchMethod(tree);
+	mls.setSearchRadius(0.03);
+	mls.process(*temp_cloud);
+	
+	// Normal Estimation
+	pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+	ne.setInputCloud(temp_cloud);
+	tree->setInputCloud(temp_cloud);
+	ne.setSearchMethod(tree);
+	ne.setRadiusSearch(0.03);
+	ne.compute(*normals);
+	
+	// Combine into one cloud
+	pcl::concatenateFields(*temp_cloud, *normals, *cloud_with_normals);
 
 	// Initialize Reconstruction Algo
 	pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
-
-	// Set typical values for the parameters
-	gp3.setSearchRadius(0.025f);
+	gp3.setSearchRadius(0.03);
 	gp3.setMu(2.5);
-	gp3.setMaximumNearestNeighbors (100);
+	gp3.setMaximumNearestNeighbors(100);
 	gp3.setMaximumSurfaceAngle(M_PI/4);   // 45 degrees
 	gp3.setMinimumAngle(M_PI/18);         // 10 degrees
 	gp3.setMaximumAngle(2*M_PI/3);        // 120 degrees
-	gp3.setNormalConsistency(false);
-
-	// Get result
+	gp3.setNormalConsistency(true);
 	gp3.setInputCloud(cloud_with_normals);
+	tree2->setInputCloud(cloud_with_normals);
 	gp3.setSearchMethod(tree2);
+
+	// Construct Mesh
 	gp3.reconstruct(mesh);
+	
+	// Get min/max, needed for gltf
+	pcl::getMinMax3D(*cloud_with_normals, min, max);
 }
 
 // Filter out unimportant points in the cloud.
 void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 {
-	// Plan: On GPU, sort by x, y, then z.
-	// Then filter out points that are identical within +- some range
-
-	// CPU Impl.
+	// Remove points that produce no meaninful geometries
+	// Can't remove all of them, but this should help with most.
+	std::cout << "ROR before: " << cloud->points.size() << std::endl;
+	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
+	ror.setRadiusSearch(0.01f);
+	ror.setMinNeighborsInRadius(20);
+	ror.setInputCloud(cloud);
+	ror.filter(*cloud);
+	std::cout << "ROR after: " << cloud->points.size() << std::endl;
+	
 	// Reduce points based on features
+	std::cout << "US before: " << cloud->points.size() << std::endl;
 	pcl::UniformSampling<pcl::PointXYZRGB> us;
 	us.setRadiusSearch(0.01f); // Experiment or set to 1/1000 of min/max
 	us.setInputCloud(cloud);
 	us.filter(*cloud);
-
-	// Remove points that produce no meaninful geometries
-	// Can't remove all of them, but this should help with most.
-	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
-	ror.setRadiusSearch(2 * 0.025f);
-	ror.setMinNeighborsInRadius(2);
-	ror.setInputCloud(cloud);
-	ror.filter(*cloud);
-
-	// For GPU impl, take UniformSampling code and parallelize by Voxel.
-	// Straightforward but should provide big improvement.
+	std::cout << "US after: " << cloud->points.size() << std::endl;
 }
 
 
