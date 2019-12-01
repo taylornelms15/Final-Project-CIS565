@@ -161,14 +161,12 @@ set(cudasources
 
 set(sources
     src/point_cloud_node.cpp
-    src/TrifocalTensor.cpp
 )
 
 set(headers
     src/ptypes.h
     src/point_cloud_node.h
     src/pointMatcher.h
-    src/TrifocalTensor.hpp
 )
 
 list(SORT sources)

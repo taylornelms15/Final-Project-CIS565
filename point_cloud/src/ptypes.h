@@ -9,16 +9,17 @@ Should have few dependencies, be common to most functions we use
 #define POINT_TYPES_H
 
 #define CERES_FOUND 1
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
-#include <opencv2/sfm.hpp>
+#include <opencv2/rgbd.hpp>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Transform.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "std_msgs/String.h"
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CameraInfo.h>
@@ -28,12 +29,6 @@ Should have few dependencies, be common to most functions we use
 #include <geometry_msgs/TransformStamped.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Transform.h>
