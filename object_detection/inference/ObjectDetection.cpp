@@ -8,7 +8,7 @@
 #include "../cuda_utilities/cudaMappedMemory.h"
 #include "../cuda_utilities/cudaUtility.h"
 
-#include "../nvidia_files/filesystem.h"
+#include "../utils/filesystem.h"
 #include <assert.h>
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map
@@ -99,8 +99,6 @@ ObjectDetection* ObjectDetection::CreateUFF( const char* model, const char* clas
 		output_blobs.push_back(numDetections);
 	
 	// load the model this is based on the model maker loader
-	// look into null params
-	// TODO
 	if( !net->LoadNetwork(NULL, model, NULL, input, inputDims, output_blobs,maxBatchSize, precision, device, allowGPUFallback) )
 	{
 		printf("detectNet -- failed to initialize.\n");
@@ -227,10 +225,7 @@ bool ObjectDetection::defaultColors()
 	if( !cudaAllocMapped((void**)&TRTClassColors[HOST], (void**)&TRTClassColors[DEVICE], numClasses * sizeof(float4)) )
 		return false;
 
-	// if there are a large number of classes (MS COCO)
 	// programatically generate the class color map
-	if( numClasses > 10 )
-	{
 		// https://github.com/dusty-nv/pytorch-segmentation/blob/16882772bc767511d892d134918722011d1ea771/datasets/sun_remap.py#L90
 		#define bitget(byteval, idx)	((byteval & (1 << idx)) != 0)
 
@@ -256,9 +251,6 @@ bool ObjectDetection::defaultColors()
 
 //			printf(LOG_TRT "color %02i  %3i %3i %3i %3i\n", i, (int)r, (int)g, (int)b, (int)DETECTNET_DEFAULT_ALPHA);
 		}
-	}
-	else
-	{
 		// blue colors, except class 1 is green
 		for( uint32_t n=0; n < numClasses; n++ )
 		{
@@ -277,7 +269,6 @@ bool ObjectDetection::defaultColors()
 				TRTClassColors[0][n*4+3] = 75.0f;	// a
 			}
 		}
-	}
 
 	return true;
 }
@@ -427,19 +418,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 			return -1;
 		}
 	}
-	else if( IsModelType(MODEL_ONNX) )
-	{
-		// downsample, convert to band-sequential RGB, and apply pixel normalization, mean pixel subtraction and standard deviation
-		if( CUDA_FAILED(cudaPreImageNetNormMeanRGB((float4*)rgba, width, height, TRTInputCUDA, TRTWidth, TRTHeight, 
-										   make_float2(0.0f, 1.0f), 
-										   make_float3(0.485f, 0.456f, 0.406f),
-										   make_float3(0.229f, 0.224f, 0.225f), 
-										   GetStream())) )
-		{
-			printf(LOG_TRT "imageNet::PreProcess() -- cudaPreImageNetNormMeanRGB() failed\n");
-			return false;
-		}
-	}
 	else{
 		return false;
 	}
@@ -503,27 +481,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		// sort the detections by confidence value
 		sortDetections(detections, numDetections);
 	}
-	else if( IsModelType(MODEL_ONNX) )
-	{
-		float* coord = TRTOutputs[0].CPU;
-
-		coord[0] = ((coord[0] + 1.0f) * 0.5f) * float(width);
-		coord[1] = ((coord[1] + 1.0f) * 0.5f) * float(height);
-		coord[2] = ((coord[2] + 1.0f) * 0.5f) * float(width);
-		coord[3] = ((coord[3] + 1.0f) * 0.5f) * float(height);
-
-		printf(LOG_TRT "detectNet::Detect() -- ONNX -- coord (%f, %f) (%f, %f)  image %ux%u\n", coord[0], coord[1], coord[2], coord[3], width, height);
-
-		detections[numDetections].Instance   = numDetections;
-		detections[numDetections].ClassID    = 0;
-		detections[numDetections].Confidence = 1;
-		detections[numDetections].Left       = coord[0];
-		detections[numDetections].Top        = coord[1];
-		detections[numDetections].Right      = coord[2];
-		detections[numDetections].Bottom	  = coord[3];	
-	
-		numDetections++;
-	}
 
 	// PROFILER_END(PROFILER_POSTPROCESS);
 
@@ -543,7 +500,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 
 
 // clusterDetections (UFF)
-// TODO check if being called, it is
 int ObjectDetection::clusterDetections( Detection* detections, int n, float threshold )
 {
 	if( n == 0 )

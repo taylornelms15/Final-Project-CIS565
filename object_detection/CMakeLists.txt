@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mesh_construction)
+project(object_detection)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,17 +8,19 @@ project(mesh_construction)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  drone_mom_msgs
   roscpp
   sensor_msgs
   std_msgs
-  cv_bridge
   vision_msgs
-  drone_mom_msgs
+  geometry_msgs
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(OpenCV REQUIRED)
+find_package(CUDA REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -73,7 +75,7 @@ find_package(OpenCV REQUIRED)
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   sensor_msgs#   std_msgs#   vision_msgs
+#   drone_mom_msgs#   sensor_msgs#   std_msgs#   std_msgs
 # )
 
 ################################################
@@ -107,8 +109,8 @@ find_package(OpenCV REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES mesh_construction
-#  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs drone_mom_msgs
+#  LIBRARIES object_detection
+#  CATKIN_DEPENDS drone_mom_msgs roscpp sensor_msgs std_msgs std_msgs
 #  DEPENDS system_lib
 )
 
@@ -118,17 +120,47 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+# include paths
 include_directories(
-#  include
   ${catkin_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
 )
 
+set(utils
+	utils/filesystem.cpp
+	utils/img_write.cpp
+	utils/randInt8Calibrator.cpp
+	utils/plugins.cpp
+)
+
+set(cudasources
+	cuda_utilities/imageNet.cu 
+	cuda_utilities/detectNet.cu
+  	cuda_utilities/cudaRGB.cu
+)
+
+set(detectsources
+	src/node_detectnet.cpp
+	src/image_converter.cpp 
+	inference/ModelImporter.cpp
+	inference/ObjectDetection.cpp
+)
+
+set(cudaheaders
+	cuda_utilites/imageNet.cuh
+	cuda_utilities/detectNet.cuh
+)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/mesh_construction.cpp
+#   src/${PROJECT_NAME}/object_detection.cpp
 # )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -O3 -gencode arch=compute_53,code=sm_53)
+#set(CUDA_VERBOSE_BUILD ON)
+cuda_add_library(cuda_util ${LIB_TYPE} ${cudasources})
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -137,8 +169,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME} src/mesh_construct_node.cpp)
-add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+add_executable(${PROJECT_NAME} ${detectsources} ${utils})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -147,6 +179,7 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
+add_dependencies(${PROJECT_NAME} cuda_util ${catkin_EXPORTED_TARGETS})
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
@@ -154,7 +187,14 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
    ${PROJECT_NAME}
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS} 
+   cuda_util
+   nvinfer
+   nvinfer_plugin
+   nvonnxparser
+   nvcaffe_parser
+   ${CUDA_cublas_LIBRARY}
  )
+
 
 #############
 ## Install ##
@@ -203,7 +243,7 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_mesh_construction.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_object_detection.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

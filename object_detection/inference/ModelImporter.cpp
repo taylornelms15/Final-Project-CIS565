@@ -2,9 +2,9 @@
  *
  */
 #include "ModelImporter.h"
-#include "../nvidia_files/randInt8Calibrator.h"
+#include "../utils/randInt8Calibrator.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
-#include "../nvidia_files/filesystem.h"
+#include "../utils/filesystem.h"
 
 
 /*

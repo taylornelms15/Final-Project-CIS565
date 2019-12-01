@@ -48,8 +48,8 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 	}
 
 
-	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data");
-	locations.push_back("/home/slothjet/CIS565/droneMom_ws/src/Final-Project-CIS565/deep_learning_pipeline/data/");
+	locations.push_back("/home/slothjet/CIS565/droneMoM_ws/src/Final-Project-CIS565/deep_learning_pipeline/data");
+	locations.push_back("/home/slothjet/CIS565/droneMoM_ws/src/Final-Project-CIS565/deep_learning_pipeline/data/");
 
 	// check each location until the file is found
 	const size_t numLocations = locations.size();

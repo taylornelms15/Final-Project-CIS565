@@ -9,6 +9,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
 
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/Image.h>
 #include <drone_mom_msgs/drone_mom.h>
    std::vector<std::string> class_descriptions;
    std::string key;
@@ -30,12 +32,12 @@
 
    }
 
-   void DetectionCallback(const drone_mom_msgs::drone_mom& msg1)
+   void DetectionCallback(const drone_mom_msgs::drone_mom::ConstPtr msg1)
    {
       // print stuff to show how stuff works
      // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
-     int detected_elements = msg1.classification.detections.size();
-     vision_msgs::Detection2DArray msg = msg1.classification;
+     int detected_elements = msg1->classification.detections.size();
+     vision_msgs::Detection2DArray msg = msg1->classification;
      for(int i = 0; i < detected_elements; i++)
      {
         ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);
@@ -51,21 +53,52 @@
 
         // since we got the database from setup we can now see what our bounding box contains!
         ROS_INFO("classified: %s", class_descriptions[idx].c_str());
-
+	}
 	cv_bridge::CvImagePtr cv_ptr;
-   try
-    {
-      cv_ptr = cv_bridge::toCvCopy(msg.detections[i].source_img, sensor_msgs::image_encodings::RGB8);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-    }
-    cv::imshow("Image window", cv_ptr->image);
-    cv::waitKey(3);  
+//   try
+//    {
+//      cv_ptr = cv_bridge::toCvCopy(msg.detections[0].source_img, sensor_msgs::image_encodings::RGB8);
+//    }
+//    catch (cv_bridge::Exception& e)
+//   {
+//    ROS_ERROR("cv_bridge exception: %s", e.what());
+//    return;
+//    }
+//    cv::imshow("Image window", cv_ptr->image);
+//    cv::waitKey(3);  
 
-     }
+	ROS_INFO("===height %d===",msg1->cam_info.height);
+	ROS_INFO("===width %d===",msg1->cam_info.width);
+
+	int time_secs = msg1->imu_msg.header.stamp.sec;
+    int time_nsecs = msg1->imu_msg.header.stamp.nsec;
+    double timeValue = time_secs + (1e-9 * time_nsecs);
+	ROS_INFO("===IMU %s===",msg1->imu_msg.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue);
+   
+	int time2_secs = msg1->raw_image.header.stamp.sec;
+    int time2_nsecs =msg1->raw_image.header.stamp.nsec;
+    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
+	ROS_INFO("===IMAGE %s===", msg1->raw_image.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue2);
+    
+    int time3_secs = msg1->cam_info.header.stamp.sec;
+    int time3_nsecs = msg1->cam_info.header.stamp.nsec;
+    double timeValue3 = time3_secs + (1e-9 * time3_nsecs);
+	ROS_INFO("===CAMERA %s===", msg1->cam_info.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue3);
+	
+	int time4_secs = msg1->TIC.header.stamp.sec;
+    int time4_nsecs = msg1->TIC.header.stamp.nsec;
+    double timeValue4 = time4_secs + (1e-9 * time4_nsecs);
+	ROS_INFO("===TIC %s===", msg1->TIC.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue4);
+
+    int time5_secs = msg1->TGI.header.stamp.sec;
+    int time5_nsecs = msg1->TGI.header.stamp.nsec;
+    double timeValue5 = time5_secs + (1e-9 * time5_nsecs);
+	ROS_INFO("===TGI %s===", msg1->TGI.header.frame_id.c_str());
+    ROS_INFO("\ttime: %9.6f", timeValue5);
 
    }
    
