@@ -25,6 +25,7 @@
 #include "../utils/img_write.h"
 #include "../inference/ObjectDetection.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
+#include "../cuda_utilities/profiler.h"
 
 #include "image_converter.h"
 
@@ -159,7 +160,10 @@ int main(int argc, char **argv)
 	// std::string model_path;
 	std::string model_name;
 
-
+	
+	//
+	create_events();
+		
 	// default parameter is to use the ssd mobilenet
 	private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
 
