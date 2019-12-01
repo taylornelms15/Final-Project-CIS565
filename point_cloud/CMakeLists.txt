@@ -6,6 +6,7 @@ project(point_cloud)
 
 set("OpenCV_DIR" "/usr/local/share/opencv4")
 find_package(Eigen3 REQUIRED)
+find_package(Ceres REQUIRED)
 find_package(OpenCV REQUIRED PATHS /usr/local/share)
 find_package(CUDA REQUIRED)
 find_package(PCL 1.3 REQUIRED COMPONENTS common io)
