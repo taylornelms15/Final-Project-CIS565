@@ -281,13 +281,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	node[0].weights = NULL;
 	node[0].weights_count = 0;
 	node[0].has_translation = 0;
-	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#coordinate-system-and-units
-	// https://www.ros.org/reps/rep-0103.html
-	node[0].has_rotation = 0; // ROS to GLTF rotation.
-	node[0].rotation[0] = -1.5708; // x (rads)
-	node[0].rotation[1] = -1.5708; // y (rads)
-	node[0].rotation[2] =  0.0; // z (rads)
-	node[0].rotation[3] =  1.0; // w (scalar) (rads)
+	node[0].has_rotation = 0;
 	node[0].has_scale = 0;
 	node[0].has_matrix = 0;
 	data.nodes = node;
@@ -336,40 +330,73 @@ void PointCloudToMesh(
 	static pcl::PointCloud<pcl::Normal>::Ptr                normals (new pcl::PointCloud<pcl::Normal>);
 	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
 	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+	
+	// Transform pointcloud from ROS coords to GLTF coords
+	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#coordinate-system-and-units
+	// https://www.ros.org/reps/rep-0103.html
+	// x -> z
+	// y -> -x
+	// z -> y
+	std::for_each(cloud->points.begin(), cloud->points.end(),
+		[](pcl::PointXYZRGB& p) {
+			float oldx, oldy, oldz;
+			oldx = p.x;
+			oldy = p.y;
+			oldz = p.z;
+			
+			p.x = -1.0 * oldy;
+			p.y = oldz;
+			p.z = oldx;
+		});
+	
+	// Remove NaN Points (just in case)
+	std::vector<int> throw_away;
+	pcl::removeNaNFromPointCloud(*cloud, *cloud, throw_away);
 
 	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes. 
 	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGB> mls;
+	std::cout << "Before MLS: " << cloud->points.size() << std::endl;
 	tree->setInputCloud(cloud);
 	mls.setComputeNormals(false);
 	mls.setInputCloud(cloud);
 	mls.setPolynomialOrder(2);
 	mls.setSearchMethod(tree);
-	mls.setSearchRadius(0.03);
+	mls.setSearchRadius(0.05);
+	mls.setPolynomialFit(false); // Too much computational power needed.
+	mls.setUpsamplingMethod(pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGB>::RANDOM_UNIFORM_DENSITY);
+	mls.setPointDensity(3);
 	mls.process(*temp_cloud);
+	std::cout << "After MLS: " << temp_cloud->points.size() << std::endl;
 	
 	// Normal Estimation
 	pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
 	ne.setInputCloud(temp_cloud);
-	tree->setInputCloud(temp_cloud);
-	ne.setSearchMethod(tree);
-	ne.setRadiusSearch(0.03);
+	ne.setRadiusSearch(0.05);
+	//tree->setInputCloud(temp_cloud);
+	//ne.setSearchMethod(tree);
+	//ne.setKSearch(20);
 	ne.compute(*normals);
 	
 	// Combine into one cloud
 	pcl::concatenateFields(*temp_cloud, *normals, *cloud_with_normals);
+	
+	// Now remove any NaN normals. This will also remove the points themselves.
+	pcl::removeNaNNormalsFromPointCloud(*cloud_with_normals, *cloud_with_normals, throw_away);
 
 	// Initialize Reconstruction Algo
+	std::cout << "GP3 Start" << std::endl;
 	pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal> gp3;
-	gp3.setSearchRadius(0.03);
-	gp3.setMu(2.5);
+	gp3.setSearchRadius(0.05);
+	gp3.setMu(3.0);
 	gp3.setMaximumNearestNeighbors(100);
 	gp3.setMaximumSurfaceAngle(M_PI/4);   // 45 degrees
 	gp3.setMinimumAngle(M_PI/18);         // 10 degrees
 	gp3.setMaximumAngle(2*M_PI/3);        // 120 degrees
-	gp3.setNormalConsistency(true);
+	gp3.setNormalConsistency(false);
 	gp3.setInputCloud(cloud_with_normals);
 	tree2->setInputCloud(cloud_with_normals);
 	gp3.setSearchMethod(tree2);
+	std::cout << "GP3 End" << std::endl;
 
 	// Construct Mesh
 	gp3.reconstruct(mesh);
