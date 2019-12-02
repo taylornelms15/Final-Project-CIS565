@@ -9,6 +9,7 @@
 #include "../cuda_utilities/cudaUtility.h"
 
 #include "../utils/filesystem.h"
+#include "../cuda_utilities/profiler.h"
 #include <assert.h>
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map
@@ -433,11 +434,15 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	// context->enqueue(batchSize, buffers, stream, nullptr);
 	// may need some ring buffer to do this properly
 	// and pipeline our loop
+	profiler_begin(INFERENCE_BEGIN,TRTStream);
+
 	if( !TRTContext->execute(1, inferenceBuffers) )
 	{
 		printf(LOG_TRT "detectNet::Detect() -- failed to execute TensorRT context\n");
 		return -1;
 	}
+
+	profiler_end(INFERENCE_END,TRTStream);
 	
 	// PROFILER_END(PROFILER_NETWORK);
 	// PROFILER_BEGIN(PROFILER_POSTPROCESS);
