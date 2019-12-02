@@ -13,10 +13,10 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/point_cloud.h>
 
-#include "TrifocalTensor.hpp"
 #include "pointMatcher.h"
 
     typedef pcl::PointXYZRGBL PointT;
+    typedef std::vector<PointT> PointT_vec;
 
 
     int getEncodingTypeForCV(const std::string& encoding){
