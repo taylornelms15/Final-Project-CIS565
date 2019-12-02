@@ -12,9 +12,6 @@
 #include "../utils/profiler.h"
 #include <assert.h>
 
-// #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map
-// #define OUTPUT_BBOX 1	// Caffe has separate output layer for bounding box
-
 #define OUTPUT_UFF  0	// UFF has primary output containing detection results
 #define OUTPUT_NUM	1	// UFF has secondary output containing one detection count
 
@@ -411,8 +408,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	// This will likely be different for EVERY network 
 	if( IsModelType(MODEL_UFF) )
 	{
-		if( CUDA_FAILED(cudaPreImageNetNormBGR((float4*)rgba, width, height, TRTInputCUDA, TRTWidth, TRTHeight,
-										  make_float2(-1.0f, 1.0f), GetStream())) )
+		if( CUDA_FAILED(cudaPreImageNetNormBGR((float4*)rgba, width, height, TRTInputCUDA, TRTWidth, TRTHeight,make_float2(-1.0f, 1.0f), GetStream())) )
 		{
 			printf(LOG_TRT "detectNet::Detect() -- cudaPreImageNetNorm() failed\n");
 			return -1;
