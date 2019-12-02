@@ -25,6 +25,7 @@
 #include "../utils/img_write.h"
 #include "../inference/ObjectDetection.h"
 #include "../cuda_utilities/cudaMappedMemory.h"
+#include "../utils/profiler.h"
 
 #include "image_converter.h"
 
@@ -41,16 +42,8 @@ ros::Publisher* detection_pub = NULL;
 
 vision_msgs::VisionInfo info_msg;
 
-
-drone_mom_msgs::drone_mom make_message(const sensor_msgs::Imu::ConstPtr& imu/*, const sensor_msgs::CameraInfo::ConstPtr& cam,const geometry_msgs::TransformStamped::ConstPtr& tic,const geometry_msgs::TransformStamped::ConstPtr& tgi */)
-{
-	drone_mom_msgs::drone_mom msg;
-	//std::memcpy(imu->header.frame_id.begin(),imu->header.frame_id.end(),msg.imu_msg.header.frame_id.begin());
-	msg.imu_msg.header.stamp = imu->header.stamp;
-	msg.imu_msg.header.seq = imu->header.seq;	
-	return msg;
-
-}
+//
+typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Imu,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
 
 
 // callback triggered when a new subscriber connected to vision_info topic
@@ -89,10 +82,9 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 		ROS_INFO("detected %i objects in %ux%u image", numDetections, input->width, input->height);
 		
 		//
-		drone_mom_msgs::drone_mom msg = make_message(imu);
-		//memcpy(&msg.imu_msg.header,imu->header,sizeof(sensor_msgs::Header));
-		//std::memcpy(imu->begin(),imu->end(),msg.imu_msg.begin());
-		//msg.imu_msg = new_imu;
+		drone_mom_msgs::drone_mom msg;
+
+		msg.imu_msg = *imu;
 		msg.cam_info = *cam;
 		msg.TIC = *tic;
 		msg.TGI = *tgi;
@@ -159,7 +151,10 @@ int main(int argc, char **argv)
 	// std::string model_path;
 	std::string model_name;
 
-
+	
+	//
+	create_events();
+		
 	// default parameter is to use the ssd mobilenet
 	private_nh.param<std::string>("model_name", model_name, "ssd-mobilenet-v2");
 
@@ -268,9 +263,6 @@ int main(int argc, char **argv)
 
 	//
 	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 100);
-  	
-  	//
-	typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Imu,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
   	
   	//
 	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_sub, imu_sub,cam_sub,tic_sub,tgi_sub);

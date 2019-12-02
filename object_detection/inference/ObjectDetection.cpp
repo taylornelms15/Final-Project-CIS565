@@ -9,7 +9,7 @@
 #include "../cuda_utilities/cudaUtility.h"
 
 #include "../utils/filesystem.h"
-#include "../cuda_utilities/profiler.h"
+#include "../utils/profiler.h"
 #include <assert.h>
 
 // #define OUTPUT_CVG  0	// Caffe has output coverage (confidence) heat map

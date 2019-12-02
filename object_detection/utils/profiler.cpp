@@ -52,7 +52,7 @@ inline void profiler_end(profilertype type, cudaStream_t stream=0)
 	assert(start_evt != NULL);
 
 	CUDA(cudaEventRecord(end_evt,stream)); 
-	CUDA(cudaEventElapsedTime(accumulated_time,start_evt,end_evt));
+	CUDA(cudaEventElapsedTime(&accumulated_time,start_evt,end_evt));
 	
 	printf(LOG_PRF "%f ms\n",accumulated_time);
 }
@@ -64,3 +64,4 @@ inline void destroy_events()
 		CUDA(cudaEventDestroy(cuda_evt_table[i]));
 	}
 }
+
