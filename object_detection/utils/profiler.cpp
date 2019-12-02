@@ -1,6 +1,3 @@
-#ifndef __PROFILER_H__
-#define __PROFILER_H__
-
 #include <assert.h>
 #include <stdio.h>
 #include "cudaUtility.h"
@@ -26,7 +23,7 @@ enum profilertype
 };
 
 // each profiler has a start and end event
-cudaEvent_t cuda_evt_table[NUM_PROFILERS];
+static cudaEvent_t cuda_evt_table[NUM_PROFILERS];
 
 inline void create_events()
 {
@@ -67,5 +64,3 @@ inline void destroy_events()
 		CUDA(cudaEventDestroy(cuda_evt_table[i]));
 	}
 }
-
-#endif

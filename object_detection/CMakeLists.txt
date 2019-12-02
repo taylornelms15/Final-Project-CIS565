@@ -131,12 +131,13 @@ set(utils
 	utils/img_write.cpp
 	utils/randInt8Calibrator.cpp
 	utils/plugins.cpp
+  utils/profiler.cpp
 )
 
 set(cudasources
 	cuda_utilities/imageNet.cu 
 	cuda_utilities/detectNet.cu
-  	cuda_utilities/cudaRGB.cu
+  cuda_utilities/cudaRGB.cu
 )
 
 set(detectsources
