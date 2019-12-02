@@ -3,6 +3,8 @@
 #include "cudaUtility.h"
 
 
+// overlays a box on detected obect
+
 template<typename T>
 __global__ void gpuDetectionOverlayBox( T* input, T* output, int imgWidth, int imgHeight, int x0, int y0, int boxWidth, int boxHeight, const float4 color ) 
 {

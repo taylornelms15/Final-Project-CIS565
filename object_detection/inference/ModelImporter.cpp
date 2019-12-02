@@ -223,13 +223,6 @@ ModelImporter::ModelImporter()
 	TRTDevice    	   = DEVICE_GPU;
 	TRTAllowGPUFallback = false;
 
-	// TRTProfilerQueriesUsed = 0;
-	// TRTProfilerQueriesDone = 0;
-
-	// memset(TRTEventsCPU, 0, sizeof(TRTEventsCPU));
-	// memset(TRTEventsGPU, 0, sizeof(TRTEventsGPU));
-	// memset(TRTProfilerTimes, 0, sizeof(TRTProfilerTimes));
-
 }
 
 
@@ -376,10 +369,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	// create our network builder which can be used on any model
 	nvinfer1::INetworkDefinition* network = builder->createNetwork();
 
-	//
-	//nvuffparser::IUffParser* parser = nvuffparser::createUffParser();
-//	nvonnxparser::IParser* onnx_parser = nvonnxparser::createParser(*network, gLogger);
-
 	// set debug flags
 	builder->setDebugSync(TRTEnableDebug);
 
@@ -393,7 +382,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	//
 	// depending on our model we need to create and parse differently
 	// this is all explained in the documentation
-	// TODO support caffe?
 
 	// create our tensorRt parsor for our onnx model
 	if( TRTModelType == MODEL_ONNX )
@@ -465,12 +453,12 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	std::map<std::string, nvinfer1::Dims3> inputDimensions;
 
 	// TODO figure this out
-	for( int i=0, n=network->getNbInputs(); i < n; i++ )
-	{
-		nvinfer1::Dims3 dims = static_cast<nvinfer1::Dims3&&>(network->getInput(i)->getDimensions());
-		inputDimensions.insert(std::make_pair(network->getInput(i)->getName(), dims));
-		std::cout << LOG_TRT << "retrieved Input tensor \"" << network->getInput(i)->getName() << "\":  " << dims.d[0] << "x" << dims.d[1] << "x" << dims.d[2] << std::endl;
-	}
+	// for( int i=0, n=network->getNbInputs(); i < n; i++ )
+	// {
+	// 	nvinfer1::Dims3 dims = static_cast<nvinfer1::Dims3&&>(network->getInput(i)->getDimensions());
+	// 	inputDimensions.insert(std::make_pair(network->getInput(i)->getName(), dims));
+	// 	std::cout << LOG_TRT << "retrieved Input tensor \"" << network->getInput(i)->getName() << "\":  " << dims.d[0] << "x" << dims.d[1] << "x" << dims.d[2] << std::endl;
+	// }
 
 
 	// display progress of the engine
@@ -562,8 +550,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	network->destroy();
 	engine->destroy();
 	builder->destroy();
-	// parser->destroy();
-//	onnx_parser->destroy();
 
 	printf(LOG_TRT "clean up successful\n");
 
@@ -582,9 +568,6 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	if( !model_path_ )
 		return false;
 
-
-	// std::cout << "model path " << model_path_ << std::endl;
-
 	printf(LOG_TRT "loading NVIDIA plugins...\n");
 
 	bool loadedPlugins = initLibNvInferPlugins(&gLogger, "");
@@ -602,8 +585,6 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 	 */
 	const std::string model_path    = locateFile(model_path_);
 	const std::string prototxt_path = locateFile(prototxt_path_ != NULL ? prototxt_path_ : "");
-	
-	std::cout << "model path " << model_path << std::endl;
 
 	const std::string model_ext = fileExtension(model_path_);
 	const modelType   model_fmt = modelTypeFromStr(model_ext.c_str());
@@ -867,14 +848,6 @@ bool ModelImporter::LoadNetwork( const char* prototxt_path_, const char* model_p
 		TRTOutputs.push_back(l);
 	}
 	
-
-	// /*
-	//  * create events for timing
-	//  */
-	// for( int n=0; n < PROFILER_TOTAL * 2; n++ )
-	// 	CUDA(cudaEventCreate(&mEventsGPU[n]));
-
-	// TODO figure out our version
 	DIMS_W(TRTInputDims) = DIMS_W(inputDims);
 	DIMS_H(TRTInputDims) = DIMS_H(inputDims);
 	DIMS_C(TRTInputDims) = DIMS_C(inputDims);

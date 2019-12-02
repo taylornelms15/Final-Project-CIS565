@@ -218,7 +218,6 @@ bool ObjectDetection::allocDetections()
 
 	
 // defaultColors
-// this is hard 
 bool ObjectDetection::defaultColors()
 {
 	const uint32_t numClasses = GetNumClasses();
@@ -406,8 +405,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		return -1;
 	}
 
-	// PROFILER_BEGIN(PROFILER_PREPROCESS);
-
 	// preprocess setp we need to convert our image based on what it was trained on
 	// This will likely be different for EVERY network 
 	if( IsModelType(MODEL_UFF) )
@@ -422,9 +419,6 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	else{
 		return false;
 	}
-
-	// PROFILER_END(PROFILER_PREPROCESS);
-	// PROFILER_BEGIN(PROFILER_NETWORK);
 
 	// process with TensorRT
 	void* inferenceBuffers[] = { TRTInputCUDA, TRTOutputs[HOST].CUDA, TRTOutputs[DEVICE].CUDA };
@@ -444,9 +438,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 
 	profiler_end(INFERENCE_END,TRTStream);
 	
-	// PROFILER_END(PROFILER_NETWORK);
-	// PROFILER_BEGIN(PROFILER_POSTPROCESS);
-
+	profiler_start(POSTPROCESS_START);
 	// post-processing / clustering
 	int numDetections = 0;
 
@@ -487,7 +479,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		sortDetections(detections, numDetections);
 	}
 
-	// PROFILER_END(PROFILER_POSTPROCESS);
+	profiler_end(POSTPROCESS_END);
 
 	// render the overlay
 	if( overlay != 0 && numDetections > 0 )
@@ -571,7 +563,7 @@ void ObjectDetection::sortDetections( Detection* detections, int numDetections )
 // Overlay
 bool ObjectDetection::Overlay( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )
 {
-	// PROFILER_BEGIN(PROFILER_VISUALIZE);
+	// profiler_start(POSTPROCESS_START);
 
 	if( flags == 0 )
 	{
@@ -586,6 +578,6 @@ bool ObjectDetection::Overlay( float* input, uint32_t width, uint32_t height, De
 			return false;
 	}
 	
-	// PROFILER_END(PROFILER_VISUALIZE);
+	// profiler_start(POSTPROCESS_START);
 	return true;
 }

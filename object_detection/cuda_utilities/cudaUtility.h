@@ -61,12 +61,6 @@
  */
 #define LOG_CUDA "[cuda]  "
 
-/*
- * define this if you want all cuda calls to be printed
- */
-//#define CUDA_TRACE
-
-
 
 /**
  * cudaCheckError
