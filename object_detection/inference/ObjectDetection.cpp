@@ -405,6 +405,8 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		return -1;
 	}
 
+	//profiler_begin(PREPROCESS_BEGIN,TRTStream);
+
 	// preprocess setp we need to convert our image based on what it was trained on
 	// This will likely be different for EVERY network 
 	if( IsModelType(MODEL_UFF) )
@@ -419,6 +421,8 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	else{
 		return false;
 	}
+
+	//profiler_end(PREPROCESS_END,TRTStream);
 
 	// process with TensorRT
 	void* inferenceBuffers[] = { TRTInputCUDA, TRTOutputs[HOST].CUDA, TRTOutputs[DEVICE].CUDA };
@@ -438,7 +442,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 
 	profiler_end(INFERENCE_END,TRTStream);
 	
-	profiler_start(POSTPROCESS_START);
+	//profiler_begin(POSTPROCESS_BEGIN,TRTStream);
 	// post-processing / clustering
 	int numDetections = 0;
 
@@ -479,17 +483,18 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		sortDetections(detections, numDetections);
 	}
 
-	profiler_end(POSTPROCESS_END);
 
 	// render the overlay
 	if( overlay != 0 && numDetections > 0 )
 	{
 		if( !Overlay(rgba, width, height, detections, numDetections, overlay) )
 			printf(LOG_TRT "detectNet::Detect() -- failed to render overlay\n");
-	}
+	}	
 	
 	// wait for GPU to complete work			
 	CUDA(cudaDeviceSynchronize());
+
+	//profiler_end(POSTPROCESS_END,TRTStream);
 
 	// return the number of detections
 	return numDetections;
@@ -563,7 +568,6 @@ void ObjectDetection::sortDetections( Detection* detections, int numDetections )
 // Overlay
 bool ObjectDetection::Overlay( float* input, uint32_t width, uint32_t height, Detection* detections, uint32_t numDetections, uint32_t flags )
 {
-	// profiler_start(POSTPROCESS_START);
 
 	if( flags == 0 )
 	{
@@ -578,6 +582,5 @@ bool ObjectDetection::Overlay( float* input, uint32_t width, uint32_t height, De
 			return false;
 	}
 	
-	// profiler_start(POSTPROCESS_START);
 	return true;
 }

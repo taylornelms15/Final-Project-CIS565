@@ -56,6 +56,7 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 // input image subscriber callback
 void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Imu::ConstPtr& imu, const sensor_msgs::CameraInfo::ConstPtr& cam,const geometry_msgs::TransformStamped::ConstPtr& tic,const geometry_msgs::TransformStamped::ConstPtr& tgi  )
+// void img_callback( const sensor_msgs::ImageConstPtr& input)
 {
 	// convert the image to reside on GPU
 	if( !cvt || !cvt->Convert(input) )
@@ -67,8 +68,15 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 	// classify the image
 	ObjectDetection::Detection* detections = NULL;
 
+	//
+	// profiler_begin(DETECT_BEGIN);
+
+	//
 	const int numDetections = net->Detect(cvt->ImageGPU(), cvt->GetWidth(), cvt->GetHeight(), &detections, ObjectDetection::OVERLAY_BOX);
 
+	//
+	// profiler_end(DETECT_END);
+	
 	// verify success	
 	if( numDetections < 0 )
 	{
@@ -79,7 +87,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 	// if objects were detected, send out message
 	if( numDetections > 0 )
 	{
-		ROS_INFO("detected %i objects in %ux%u image", numDetections, input->width, input->height);
+		//ROS_INFO("detected %i objects in %ux%u image", numDetections, input->width, input->height);
 		
 		//
 		drone_mom_msgs::drone_mom msg;
@@ -90,15 +98,12 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 		msg.TGI = *tgi;
 		msg.raw_image = *input;
 		
-		// create a detection for each bounding box
-		//vision_msgs::Detection2DArray msg;
-
 		for( int n=0; n < numDetections; n++ )
 		{
 			ObjectDetection::Detection* det = detections + n;
 
-			// printf("object %i class #%u (%s)  confidence=%f\n", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
-			// printf("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f\n", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
+			ROS_INFO("object %i class #%u (%s)  confidence=%f", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
+			ROS_INFO("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
 			
 			// create a detection sub-message
 			vision_msgs::Detection2D detMsg;
@@ -130,10 +135,6 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 		detection_pub->publish(msg);
 	}
 
-	ROS_INFO("===height %d ===",cam->height);
-	ROS_INFO("===width %d\n===",cam->width);
-
-
 }
 
 
@@ -143,15 +144,10 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "detectnet");
  
-	ros::NodeHandle nh;
 	ros::NodeHandle private_nh("~");
 
-	// std::string class_labels_path;
-	// std::string prototxt_path;
-	// std::string model_path;
 	std::string model_name;
 
-	
 	//
 	create_events();
 		
@@ -245,9 +241,7 @@ int main(int argc, char **argv)
 	/*
 	 * subscribe to image topic
 	 */
-	//ros::Subscriber img_sub = private_nh.subscribe("/cam0/image_raw", 5, img_callback);
-//	 ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
-	// ros::Subscriber imu_sub = private_nh.subscribe("/imu0", 5, imu_callback);
+	 // ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	
 	//
 	message_filters::Subscriber<sensor_msgs::Image> image_sub(private_nh, "/camera/rgb/image_raw", 100);

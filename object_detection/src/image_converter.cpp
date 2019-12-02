@@ -32,7 +32,7 @@ imageConverter::~imageConverter()
 }
 
 
-// Convert
+// // Convert
 bool imageConverter::Convert( const sensor_msgs::ImageConstPtr& input )
 {
 	//ROS_INFO("converting %ux%u %s image", input->width, input->height, input->encoding.c_str());
@@ -92,41 +92,6 @@ bool imageConverter::Convert( sensor_msgs::Image& msg, const std::string& encodi
 
 		px_depth = sizeof(uchar3);
 	}
-	else if( encoding == sensor_msgs::image_encodings::RGB8 )
-	{
-		if( CUDA_FAILED(cudaRGBA32ToRGB8((float4*)mOutputGPU, (uchar3*)mInputGPU, mWidth, mHeight)) )
-		{
-			ROS_ERROR("failed to convert %ux%u RGBA32 image to RGB8 with CUDA", mWidth, mHeight);
-			return false;
-		}
-
-		px_depth = sizeof(uchar3);
-	}
-	else if( encoding == sensor_msgs::image_encodings::BGRA8 )
-	{
-		if( CUDA_FAILED(cudaRGBA32ToBGRA8((float4*)mOutputGPU, (uchar4*)mInputGPU, mWidth, mHeight)) )
-		{
-			ROS_ERROR("failed to convert %ux%u RGBA32 image to BGRA8 with CUDA", mWidth, mHeight);
-			return false;
-		}
-
-		px_depth = sizeof(uchar4);
-	}
-	else if( encoding == sensor_msgs::image_encodings::RGBA8 )
-	{
-		if( CUDA_FAILED(cudaRGBA32ToRGBA8((float4*)mOutputGPU, (uchar4*)mInputGPU, mWidth, mHeight)) )
-		{
-			ROS_ERROR("failed to convert %ux%u RGBA32 image to RGBA8 with CUDA", mWidth, mHeight);
-			return false;
-		}
-
-		px_depth = sizeof(uchar4);
-	}
-	else if( encoding == sensor_msgs::image_encodings::MONO8 )
-	{
-		px_depth = sizeof(uint8_t);	
-		in_place = true;	
-	}
 	else
 	{
 		ROS_ERROR("image_converter -- unsupported format requested '%s'", encoding.c_str());
@@ -139,7 +104,7 @@ bool imageConverter::Convert( sensor_msgs::Image& msg, const std::string& encodi
 	msg.data.resize(msg_size);
 
 	// copy the converted image into the msg
-	memcpy(msg.data.data(), in_place ? (void*)mOutputCPU : (void*)mInputCPU, msg_size);
+	memcpy(msg.data.data(),(void*)mInputCPU, msg_size);
 
 	// populate metadata
 	msg.width  = mWidth;
