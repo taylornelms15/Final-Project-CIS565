@@ -13,10 +13,6 @@
 using namespace cv;
 using namespace cv::xfeatures2d;
 
-    //office dataset: recorded on Google Tango tablet
-    //the camera's model number: OV4682 RGB IR
-    //const static float    FoV = 131.0;
-    const static float    FoV = 120.0;
 
     const static char imageSubPath[]    = "camera/rgb/image_raw";
     const static char camInfoSubPath[]  = "camera/rgb/camera_info";
@@ -41,6 +37,7 @@ using namespace cv::xfeatures2d;
     static Mat imageD;
     enum Imgprogress{Free, WaitC, WaitD};
     static Imgprogress                  imgprogress = Free;
+    static int                          numMatches  = 0;
 
     static std::deque<Mat> imgqueue                 = std::deque<Mat>();
     static std::deque<tf2::Transform> xformqueue    = std::deque<tf2::Transform>();
@@ -223,8 +220,26 @@ using namespace cv::xfeatures2d;
 
     }//undistortColor
 
+    std::vector<glm::vec3> cameraToWorldSpace(std::vector<glm::vec3> pointsCamspace,
+                                              tf2::Transform xformC,
+                                              tf2::Transform xformG){
+
+        //Next step: transform into world space
+        std::vector<glm::vec3> pointsWorldspace = std::vector<glm::vec3>();
+        tf2::Transform camToWorld = xformC * xformG;
+        for(int i = 0; i < pointsCamspace.size(); i++){
+            glm::vec3 camvec        = pointsCamspace.at(i);
+            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, camvec.z, camvec.y);//NOTE THE SWITCHED VALUES HERE
+            tf2::Vector3 worldvecT  = camToWorld(camvecT);
+            glm::vec3 worldvec      = glm::vec3(worldvecT.x(), worldvecT.y(), worldvecT.z());
+            pointsWorldspace.push_back(worldvec);
+        }//for
+
+        return pointsWorldspace;
+    }//cameraToWorldSpace
+
     #define SCALING (1.0/1000.0)
-    void pointsFromRGBD(Mat imgC, Mat imgD,
+    PointT_vec pointsFromRGBD(Mat imgC, Mat imgD,
                         tf2::Transform xformC,//color
                         tf2::Transform xformD,//depth
                         tf2::Transform xformG,//global
@@ -232,6 +247,7 @@ using namespace cv::xfeatures2d;
                         sensor_msgs::CameraInfo camInfoD
                         ){
         ROS_INFO("===MATCHED IMAGES CALLBACK===");
+        numMatches++;
 
         Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
         Mat dC  = distCoeffsFromCamInfo(camInfoC);
@@ -266,8 +282,8 @@ using namespace cv::xfeatures2d;
         //get our list of valid points
         Point2f_vec validPoints = Point2f_vec();
         Point2f_vec validPointsU;
-        for(int i = 1; i < imgCU.rows - 1; i++){//removing edges
-            for(int j = 1; j < imgCU.cols - 1; j++){//removing edges
+        for(int i = 4; i < imgCU.rows - 4; i++){//removing edges
+            for(int j = 4; j < imgCU.cols - 4; j++){//removing edges
                 uint16_t depthVal = depthMat.at<uint16_t>(i, j);
                 if (depthVal < 800) continue;
                 validPoints.push_back(Point2f(j, i));
@@ -298,31 +314,31 @@ using namespace cv::xfeatures2d;
 
 
         //Next step: transform into world space
-        std::vector<glm::vec3> pointsWorldspace = std::vector<glm::vec3>();
-        tf2::Transform camToWorld = xformC * xformG;
-        for(int i = 0; i < pointsCamspace.size(); i++){
-            glm::vec3 camvec        = pointsCamspace.at(i);
-            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, camvec.y, camvec.z);
-            tf2::Vector3 worldvecT  = camToWorld(camvecT);
-            glm::vec3 worldvec      = glm::vec3(worldvecT.x(), worldvecT.y(), worldvecT.z());
-            pointsWorldspace.push_back(worldvec);
-        }//for
+        std::vector<glm::vec3> pointsWorldspace = cameraToWorldSpace(pointsCamspace,
+                                                                     xformC, xformG);
 
 
         //Next step: push into our point cloud
+        PointT_vec retval = PointT_vec();
         for (int i = 0; i < colorsCamspace.size(); i++){
             glm::vec3 color = colorsCamspace.at(i);
             glm::vec3 pos   = pointsWorldspace.at(i);
             PointT nextPoint = PointT(color.r, color.g, color.b, 0);
             nextPoint.x = pos.x; nextPoint.y = pos.y; nextPoint.z = pos.z;
             pcloud.push_back(nextPoint);
+            retval.push_back(nextPoint);
         }//for
 
 
         pcl::io::savePCDFile("testOutput.pcd", pcloud);
         //Reset our FSM for "waiting for image data"
         imgprogress = Free;
-        return;
+
+        //breakpoint target so we don't fill our point cloud too much
+        if (numMatches % 12 == 0){
+            ROS_INFO("Successfully ran %d matches", numMatches);
+        }//if
+        return retval;
     }//pointsFromRGBD
 
     void makeDirectionOffsetPoint(tf2::Transform transform, float x, float y, float z, uint8_t r, uint8_t g, uint8_t b){
@@ -384,6 +400,10 @@ using namespace cv::xfeatures2d;
             imgprogress = WaitC;
         }//if
         else if (imgprogress == WaitD){
+            makeDirectionOffsetPoint(xform, 0, 0, 0, 255, 0, 255);
+            makeDirectionOffsetPoint(xform, 0.01, 0, 0, 255, 0, 0);
+            makeDirectionOffsetPoint(xform, 0, 0.01, 0, 0, 255, 0);
+            makeDirectionOffsetPoint(xform, 0, 0, 0.01, 0, 0, 255);
             pointsFromRGBD(imageC, imageD,
             xformColor, xformDepth, xform,
             caminfo, dcaminfo);
@@ -409,6 +429,7 @@ using namespace cv::xfeatures2d;
             imgprogress = WaitD;
         }//if
         else if (imgprogress == WaitC){
+            makeDirectionOffsetPoint(xform, 0, 0, 0, 255, 0, 255);
             pointsFromRGBD(imageC, imageD,
             xformColor, xformDepth, xform,
             caminfo, dcaminfo);
@@ -429,12 +450,12 @@ using namespace cv::xfeatures2d;
         tf2::fromMsg(msg.transform, xform);
         found1stXform = true;
 
-#if DEBUGXFORM
+        #if DEBUGXFORM
         ROS_INFO("===XFORM GLOBAL===");
         ROS_INFO("\ttime: %f", timeValue);
         ROS_INFO("\tTranslation:\t<%.05f, %.05f, %.05f>", xlate.x, xlate.y, xlate.z);
         ROS_INFO("\tRotation:\t<%.05f, %.05f, %.05f, %.05f>", rotate.x, rotate.y, rotate.z, rotate.w);
-#endif
+        #endif
     }//TransformCallback2
 
     void TransformCallbackC(const geometry_msgs::TransformStamped& msg){
@@ -446,12 +467,12 @@ using namespace cv::xfeatures2d;
 
         tf2::fromMsg(msg.transform, xformColor);
 
-#if DEBUGXFORM
+        #if DEBUGXFORM
         ROS_INFO("===XFORM COLOR===");
         ROS_INFO("\ttime: %f", timeValue);
         ROS_INFO("\tTranslation:\t<%.05f, %.05f, %.05f>", xlate.x, xlate.y, xlate.z);
         ROS_INFO("\tRotation:\t<%.05f, %.05f, %.05f, %.05f>", rotate.x, rotate.y, rotate.z, rotate.w);
-#endif
+        #endif
 
 
     }//TransformCallback
@@ -465,13 +486,12 @@ using namespace cv::xfeatures2d;
 
         tf2::fromMsg(msg.transform, xformDepth);
 
-#if DEBUGXFORM
+        #if DEBUGXFORM
         ROS_INFO("===XFORM DEPTH===");
         ROS_INFO("\ttime: %f", timeValue);
         ROS_INFO("\tTranslation:\t<%.05f, %.05f, %.05f>", xlate.x, xlate.y, xlate.z);
         ROS_INFO("\tRotation:\t<%.05f, %.05f, %.05f, %.05f>", rotate.x, rotate.y, rotate.z, rotate.w);
-#endif
-
+        #endif
 
     }//TransformCallback
 

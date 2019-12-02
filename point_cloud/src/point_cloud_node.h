@@ -16,6 +16,7 @@
 #include "pointMatcher.h"
 
     typedef pcl::PointXYZRGBL PointT;
+    typedef std::vector<PointT> PointT_vec;
 
 
     int getEncodingTypeForCV(const std::string& encoding){
