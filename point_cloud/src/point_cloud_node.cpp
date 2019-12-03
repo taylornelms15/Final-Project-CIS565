@@ -9,6 +9,8 @@
 
 #define WRITING_PICS 1
 
+#define SKIPFRAMENUM 4
+#define ENDFRAMENUM 24
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -220,68 +222,9 @@ using namespace cv::xfeatures2d;
 
     }//undistortColor
 
-    std::vector<glm::vec3> cameraToWorldSpace(std::vector<glm::vec3> pointsCamspace,
-                                              tf2::Transform xformC,
-                                              tf2::Transform xformG){
-
-        //Next step: transform into world space
-        std::vector<glm::vec3> pointsWorldspace = std::vector<glm::vec3>();
-        tf2::Transform camToWorld = xformC * xformG;
-        for(int i = 0; i < pointsCamspace.size(); i++){
-            glm::vec3 camvec        = pointsCamspace.at(i);
-            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, camvec.z, camvec.y);//NOTE THE SWITCHED VALUES HERE
-            tf2::Vector3 worldvecT  = camToWorld(camvecT);
-            glm::vec3 worldvec      = glm::vec3(worldvecT.x(), worldvecT.y(), worldvecT.z());
-            pointsWorldspace.push_back(worldvec);
-        }//for
-
-        return pointsWorldspace;
-    }//cameraToWorldSpace
-
-    #define SCALING (1.0/1000.0)
-    PointT_vec pointsFromRGBD(Mat imgC, Mat imgD,
-                        tf2::Transform xformC,//color
-                        tf2::Transform xformD,//depth
-                        tf2::Transform xformG,//global
-                        sensor_msgs::CameraInfo camInfoC,
-                        sensor_msgs::CameraInfo camInfoD
-                        ){
-        ROS_INFO("===MATCHED IMAGES CALLBACK===");
-        numMatches++;
-
-        Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
-        Mat dC  = distCoeffsFromCamInfo(camInfoC);
-        Mat kC  = kFromCamInfo(camInfoC);
-        Mat kD  = kFromCamInfo(camInfoD);
-
-        //match our d image to our rgb image
-        Mat depthMat;
-        rgbd::registerDepth(kD, kC, dC, rbt, imgD, imgC.size(), depthMat);
-        Mat depthMatAlt;
-        normalize(depthMat, depthMatAlt, 0xffff, 0, NORM_MINMAX);
-        #if WRITING_PICS
-        imwrite("Depth_map_normalized.png", depthMatAlt);
-        #endif
-
-        //Undistort our color and depth map images
-        std::vector<glm::vec3> pointsCamspace = std::vector<glm::vec3>();  
-        std::vector<glm::vec3> colorsCamspace = std::vector<glm::vec3>();
-        double centerX  = camInfoC.K.at(2);
-        double centerY  = camInfoC.K.at(5);
-        double focalX   = camInfoC.K.at(0);
-        double focalY   = camInfoC.K.at(4);
-        Mat kCinv   = kC.inv();
-        glm::mat3 kCinvG    = glm::make_mat3((double*) kCinv.data);
-        Mat imgCU   = undistortColor(imgC, camInfoC);
-        Mat imgDMU  = undistortColor(depthMat, camInfoC);
-        normalize(imgDMU, depthMatAlt, 0xffff, 0, NORM_MINMAX);
-        #if WRITING_PICS
-        imwrite("Depth_map_normalized_undistorted.png", depthMatAlt);
-        #endif
-        
+    Point2f_vec getValidPoints(Mat imgCU, Mat depthMat){
         //get our list of valid points
         Point2f_vec validPoints = Point2f_vec();
-        Point2f_vec validPointsU;
         for(int i = 4; i < imgCU.rows - 4; i++){//removing edges
             for(int j = 4; j < imgCU.cols - 4; j++){//removing edges
                 uint16_t depthVal = depthMat.at<uint16_t>(i, j);
@@ -289,15 +232,25 @@ using namespace cv::xfeatures2d;
                 validPoints.push_back(Point2f(j, i));
             }
         }
+        return validPoints;
 
-        //undistort our points: want the projection to be for the most accurate camera projection
-        undistortPoints(validPoints, validPointsU, kC, dC, noArray(), kC);
+    }//getValidPoints
 
+    #define SCALING (1.0/1000.0)
+    void putValidPointsIntoCameraSpace(const Point2f_vec validPoints, const Point2f_vec validPointsU,
+                                        gvec3_vec& pointsCamspace, gvec3_vec& colorsCamspace,
+                                        const Mat imgCU, const Mat depthMat,
+                                        sensor_msgs::CameraInfo camInfoC
+                                        ){
+        double centerX  = camInfoC.K.at(2);
+        double centerY  = camInfoC.K.at(5);
+        double focalX   = camInfoC.K.at(0);
+        double focalY   = camInfoC.K.at(4);
 
         for (int i = 0; i < validPoints.size(); i++){
             //put in color calue
             Vec3b colorVal          = imgCU.at<Vec3b>(validPointsU[i]);
-            colorsCamspace.push_back(glm::vec3(colorVal[2], colorVal[1], colorVal[0]));
+            colorsCamspace.push_back(gvec3(colorVal[2], colorVal[1], colorVal[0]));
 
             //get depth value
             uint16_t depthVal       = depthMat.at<uint16_t>(validPoints[i]);
@@ -308,21 +261,93 @@ using namespace cv::xfeatures2d;
             double Y    = validPointsU[i].y - centerY;
             X           *= Z / focalX;
             Y           *= Z / focalY;
-            glm::vec3 cameraPoint = glm::vec3(X, Y, Z);
+            gvec3 cameraPoint = gvec3(X, Y, Z);
             pointsCamspace.push_back(cameraPoint);
         }//for
 
 
+    }//putValidPointsIntoCameraSpace
+
+    gvec3_vec cameraToWorldSpace(gvec3_vec pointsCamspace,
+                                 tf2::Transform xformC,
+                                 tf2::Transform xformG){
+
         //Next step: transform into world space
-        std::vector<glm::vec3> pointsWorldspace = cameraToWorldSpace(pointsCamspace,
-                                                                     xformC, xformG);
+        gvec3_vec pointsWorldspace = gvec3_vec();
+        tf2::Transform camToWorld = xformC * xformG;
+        for(int i = 0; i < pointsCamspace.size(); i++){
+            gvec3 camvec        = pointsCamspace.at(i);
+            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, camvec.z, camvec.y);//NOTE THE SWITCHED VALUES HERE
+            tf2::Vector3 worldvecT  = camToWorld(camvecT);
+            gvec3 worldvec      = gvec3(worldvecT.x(), worldvecT.y(), worldvecT.z());
+            pointsWorldspace.push_back(worldvec);
+        }//for
+
+        return pointsWorldspace;
+    }//cameraToWorldSpace
+
+    PointT_vec pointsFromRGBD(Mat imgC, Mat imgD,
+                        tf2::Transform xformC,//color
+                        tf2::Transform xformD,//depth
+                        tf2::Transform xformG,//global
+                        sensor_msgs::CameraInfo camInfoC,
+                        sensor_msgs::CameraInfo camInfoD
+                        ){
+        ROS_INFO("===MATCHED IMAGES CALLBACK===");
+        if (numMatches % SKIPFRAMENUM == 0){
+            numMatches++;
+            return PointT_vec();
+        }//if
+        numMatches++;
+
+        Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
+        Mat dC  = distCoeffsFromCamInfo(camInfoC);
+        Mat kC  = kFromCamInfo(camInfoC);
+        Mat kD  = kFromCamInfo(camInfoD);
+
+        //match our d image to our rgb image
+        Mat depthMat;
+        rgbd::registerDepth(kD, kC, dC, rbt, imgD, imgC.size(), depthMat);
+        #if WRITING_PICS
+        Mat depthMatAlt;
+        normalize(depthMat, depthMatAlt, 0xffff, 0, NORM_MINMAX);
+        imwrite("Depth_map_normalized.png", depthMatAlt);
+        #endif
+
+        //Undistort our color and depth map images
+        Mat kCinv           = kC.inv();
+        Mat imgCU           = undistortColor(imgC, camInfoC);//color image undistorted
+        Mat imgDMU          = undistortColor(depthMat, camInfoC);//depth map undistorted
+        #if WRITING_PICS
+        normalize(imgDMU, depthMatAlt, 0xffff, 0, NORM_MINMAX);
+        imwrite("Depth_map_normalized_undistorted.png", depthMatAlt);
+        #endif
+        
+        //get our list of valid points
+        Point2f_vec validPoints = getValidPoints(imgCU, depthMat);
+
+        //undistort our points: want the projection to be for the most accurate camera projection
+        Point2f_vec validPointsU;
+        undistortPoints(validPoints, validPointsU, kC, dC, noArray(), kC);
+
+        //validPoints, validPointsU, colorsCamspace, depthMat, pointsCamspace
+        //Get our camera-space points
+        gvec3_vec pointsCamspace = gvec3_vec();  
+        gvec3_vec colorsCamspace = gvec3_vec();
+        putValidPointsIntoCameraSpace(validPoints, validPointsU,
+                                      pointsCamspace, colorsCamspace,
+                                      imgCU, depthMat,
+                                      camInfoC);
+
+        //Next step: transform into world space
+        gvec3_vec pointsWorldspace = cameraToWorldSpace(pointsCamspace, xformC, xformG);
 
 
         //Next step: push into our point cloud
         PointT_vec retval = PointT_vec();
         for (int i = 0; i < colorsCamspace.size(); i++){
-            glm::vec3 color = colorsCamspace.at(i);
-            glm::vec3 pos   = pointsWorldspace.at(i);
+            gvec3 color = colorsCamspace.at(i);
+            gvec3 pos   = pointsWorldspace.at(i);
             PointT nextPoint = PointT(color.r, color.g, color.b, 0);
             nextPoint.x = pos.x; nextPoint.y = pos.y; nextPoint.z = pos.z;
             pcloud.push_back(nextPoint);
@@ -335,7 +360,7 @@ using namespace cv::xfeatures2d;
         imgprogress = Free;
 
         //breakpoint target so we don't fill our point cloud too much
-        if (numMatches % 12 == 0){
+        if (numMatches % ENDFRAMENUM == 0){
             ROS_INFO("Successfully ran %d matches", numMatches);
         }//if
         return retval;

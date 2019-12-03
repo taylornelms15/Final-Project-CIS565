@@ -45,6 +45,8 @@ typedef std::vector<int> int_vec;
 typedef std::vector<KeyPoint> KeyPoint_vec;
 typedef std::vector<DMatch> DMatch_vec;
 typedef std::vector<tf2::Vector3> Vector3_vec;
+typedef glm::vec3 gvec3;
+typedef std::vector<gvec3> gvec3_vec;
 
 
 
