@@ -36,7 +36,7 @@
    {
       // print stuff to show how stuff works
      // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
-     // int detected_elements = msg1->classification.detections.size();
+     int detected_elements = msg1->classification.detections.size();
      vision_msgs::Detection2DArray msg = msg1->classification;
      for(int i = 0; i < detected_elements; i++)
      {

@@ -43,7 +43,7 @@ ros::Publisher* detection_pub = NULL;
 vision_msgs::VisionInfo info_msg;
 
 //
-typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Imu,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
+typedef sync_policies::ApproximateTime<sensor_msgs::Image,sensor_msgs::CameraInfo,sensor_msgs::Image,sensor_msgs::CameraInfo,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped,geometry_msgs::TransformStamped> MySyncPolicy;
 
 
 // callback triggered when a new subscriber connected to vision_info topic
@@ -55,13 +55,13 @@ void info_connect( const ros::SingleSubscriberPublisher& pub )
 
 
 // input image subscriber callback
-void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Imu::ConstPtr& imu, const sensor_msgs::CameraInfo::ConstPtr& cam,const geometry_msgs::TransformStamped::ConstPtr& tic,const geometry_msgs::TransformStamped::ConstPtr& tgi  )
+void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_msgs::CameraInfo::ConstPtr& rgb_camera_info,const sensor_msgs::ImageConstPtr& depth_raw_image,const sensor_msgs::CameraInfo::ConstPtr& depth_camera_info,const geometry_msgs::TransformStamped::ConstPtr& tic_color,const geometry_msgs::TransformStamped::ConstPtr& tgi,const geometry_msgs::TransformStamped::ConstPtr& tic_depth )
 // void img_callback( const sensor_msgs::ImageConstPtr& input)
 {
 	// convert the image to reside on GPU
-	if( !cvt || !cvt->Convert(input) )
+	if( !cvt || !cvt->Convert(rgb_raw_image) )
 	{
-		ROS_INFO("failed to convert %ux%u %s image", input->width, input->height, input->encoding.c_str());
+		ROS_INFO("failed to convert %ux%u %s image", rgb_raw_image->width, rgb_raw_image->height, rgb_raw_image->encoding.c_str());
 		return;	
 	}
 
@@ -80,7 +80,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 	// verify success	
 	if( numDetections < 0 )
 	{
-		ROS_ERROR("failed to run object detection on %ux%u image", input->width, input->height);
+		ROS_ERROR("failed to run object detection on %ux%u image", rgb_raw_image->width, rgb_raw_image->height);
 		return;
 	}
 
@@ -92,12 +92,15 @@ void img_callback( const sensor_msgs::ImageConstPtr& input,const sensor_msgs::Im
 		//
 		drone_mom_msgs::drone_mom msg;
 
-		msg.imu_msg = *imu;
-		msg.cam_info = *cam;
-		msg.TIC = *tic;
+		msg.TIC_color = *tic_color;
+		msg.TIC_depth = *tic_depth;
 		msg.TGI = *tgi;
-		msg.raw_image = *input;
+		msg.depth_camera_info = *depth_camera_info;
+		msg.rgb_camera_info = *rgb_camera_info;
+		msg.rgb_image = *rgb_raw_image;
+		msg.depth_image = *depth_raw_image;
 		
+
 		for( int n=0; n < numDetections; n++ )
 		{
 			ObjectDetection::Detection* det = detections + n;
@@ -235,6 +238,7 @@ int main(int argc, char **argv)
 	detection_pub = &pub; // we need to publish from the subscriber callback
 
 	// the vision info topic only publishes upon a new connection
+	// subscribing to this topic gives access to the classification server
 	ros::Publisher info_pub = private_nh.advertise<vision_msgs::VisionInfo>("vision_info", 1, (ros::SubscriberStatusCallback)info_connect);
 
 
@@ -244,31 +248,31 @@ int main(int argc, char **argv)
 	 // ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	
 	//
-	message_filters::Subscriber<sensor_msgs::Image> image_sub(private_nh, "/camera/rgb/image_raw", 100);
+	message_filters::Subscriber<sensor_msgs::Image> image_rgb_raw_sub(private_nh, "/camera/rgb/image_raw", 100);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 100);
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_rgb_sub(private_nh, "/camera/rgb/camera_info", 100);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_sub(private_nh, "/tango/T_I_C_color", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_color_sub(private_nh, "/tango/T_I_C_color", 100);
 
 	//
 	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 100);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango/T_I_C_depth", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_depth_sub(private_nh, "/tango/T_I_C_depth", 100);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/camera/depth/camera_info", 100);	
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_depth_sub(private_nh, "/camera/depth/camera_info", 100);	
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/camera/depth/image_raw", 100);	
+	message_filters::Subscriber<sensor_msgs::Image> image_depth_raw_sub(private_nh, "/camera/depth/image_raw", 100);	
   	
   	//
-	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_sub, imu_sub,cam_sub,tic_sub,tgi_sub);
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_rgb_raw_sub, cam_rgb_sub,image_depth_raw_sub,cam_depth_sub,tic_color_sub,tgi_sub,tic_depth_sub);
   	
   	//
-	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5));
+	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5, _6, _7));
 
 	/*
 	 * wait for messages

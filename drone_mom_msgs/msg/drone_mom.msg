@@ -1,9 +1,9 @@
 Header header
-geometry_msgs/TransformStamped TIC 
+geometry_msgs/TransformStamped TIC_color 
 geometry_msgs/TransformStamped TGI
 geometry_msgs/TransformStamped TIC_depth
 sensor_msgs/CameraInfo depth_camera_info
+sensor_msgs/CameraInfo rgb_camera_info
 sensor_msgs/Image depth_image
 sensor_msgs/Image rgb_image
-sensor_msgs/CameraInfo rgb_cam_info
 vision_msgs/Detection2DArray classification
