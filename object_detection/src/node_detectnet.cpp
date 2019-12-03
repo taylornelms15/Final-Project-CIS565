@@ -245,9 +245,9 @@ int main(int argc, char **argv)
 	
 	//
 	message_filters::Subscriber<sensor_msgs::Image> image_sub(private_nh, "/camera/rgb/image_raw", 100);
-  	
-  	//
-	message_filters::Subscriber<sensor_msgs::Imu> imu_sub(private_nh, "/imu0", 100);
+
+	//
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 100);
 
 	//
 	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_sub(private_nh, "/tango/T_I_C_color", 100);
@@ -256,7 +256,13 @@ int main(int argc, char **argv)
 	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 100);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_sub(private_nh, "/camera/rgb/camera_info", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango/T_I_C_depth", 100);
+
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/camera/depth/camera_info", 100);	
+
+	//
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/camera/depth/image_raw", 100);	
   	
   	//
 	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_sub, imu_sub,cam_sub,tic_sub,tgi_sub);

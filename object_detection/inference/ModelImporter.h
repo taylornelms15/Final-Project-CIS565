@@ -22,13 +22,11 @@ typedef nvinfer1::DimsCHW Dims3;
 
 /**
  * Default maximum batch size
- * @ingroup tensorNet
  */
 #define DEFAULT_MAX_BATCH_SIZE  1
 
 /**
  * Prefix used for tagging printed log output from TensorRT.
- * @ingroup tensorNet
  */
 #define LOG_TRT "[TRT]   "
 
@@ -260,8 +258,6 @@ protected:
 	precisionType TRTPrecision;
 	modelType     TRTModelType;
 	cudaStream_t  TRTStream;
-	// cudaEvent_t   TRTEventsGPU[PROFILER_TOTAL * 2];
-	// timespec      TRTEventsCPU[PROFILER_TOTAL * 2];
 
 	nvinfer1::IRuntime* TRTInfer;
 	nvinfer1::ICudaEngine* TRTEngine;
@@ -272,9 +268,7 @@ protected:
 	uint32_t TRTInputSize;
 	float*   TRTInputCPU;
 	float*   TRTInputCUDA;
-	// float2   TRTProfilerTimes[PROFILER_TOTAL + 1];
-	// uint32_t TRTProfilerQueriesUsed;
-	// uint32_t TRTProfilerQueriesDone;
+
 	uint32_t TRTMaxBatchSize;
 	bool	 TRTEnableProfiler;
 	bool     TRTEnableDebug;

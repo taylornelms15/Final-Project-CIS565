@@ -9,10 +9,6 @@
  * Supported image file formats by saveImageRGBA() include:  
  *
  *   - JPEG
- *   - PNG
- *   - TGA
- *   - BMP
- *   - HDR
  *
  * @param filename Desired path of the image file to save to disk.
  * @param cpu Pointer to the buffer containing the image in CPU address space.

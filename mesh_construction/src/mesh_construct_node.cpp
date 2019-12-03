@@ -38,8 +38,8 @@
      // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
      // int detected_elements = msg1->classification.detections.size();
      vision_msgs::Detection2DArray msg = msg1->classification;
- //     for(int i = 0; i < detected_elements; i++)
- //     {
+     for(int i = 0; i < detected_elements; i++)
+     {
  //        ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);
  //        ROS_INFO("bbox cx: %9.6f", msg.detections[i].bbox.center.x);
  //        ROS_INFO("bbox Y: %9.6f", msg.detections[i].bbox.size_y);
@@ -48,12 +48,11 @@
  //        // there is only 1 result per detection I am 99% sure
  //        ROS_INFO("confidece: %1.6f", msg.detections[i].results[0].score);     
      
- //        int idx = msg.detections[i].results[0].id;
+        int idx = msg.detections[i].results[0].id;
 
-
- //        // since we got the database from setup we can now see what our bounding box contains!
- //        ROS_INFO("classified: %s", class_descriptions[idx].c_str());
-	// }
+        // since we got the database from setup we can now see what our bounding box contains!
+        ROS_INFO("classified: %s", class_descriptions[idx].c_str());
+	    }
 	cv_bridge::CvImagePtr cv_ptr;
   try
   {

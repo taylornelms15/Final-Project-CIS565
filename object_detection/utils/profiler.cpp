@@ -3,8 +3,7 @@
 #include "../cuda_utilities/cudaUtility.h"
 #include "profiler.h"
 /**
- * Prefix used for tagging printed log output from TensorRT.
- * @ingroup tensorNet
+ * Prefix
  */
 #define LOG_PRF "[PRF]  "
 
@@ -16,12 +15,13 @@ static int created = 0;
 
 void create_events()
 {
-	if(!created){	
-	for(int i = 0; i < NUM_PROFILERS; i++)
-	{
-		CUDA(cudaEventCreate(&cuda_evt_table[i]));
-	}
-	created = 1;
+	if(!created)
+	{	
+		for(int i = 0; i < NUM_PROFILERS; i++)
+		{
+			CUDA(cudaEventCreate(&cuda_evt_table[i]));
+		}
+		created = 1;
 	}
 }
 
@@ -51,12 +51,13 @@ void profiler_end(profilertype type, cudaStream_t stream)
 
 void destroy_events()
 {
-	if(created){	
-	for(int i = 0; i < NUM_PROFILERS; i++)
-	{
-		CUDA(cudaEventDestroy(cuda_evt_table[i]));
-	}
-	created = 0;
+	if(created)
+	{	
+		for(int i = 0; i < NUM_PROFILERS; i++)
+		{
+			CUDA(cudaEventDestroy(cuda_evt_table[i]));
+		}
+		created = 0;
 	}
 }
 
