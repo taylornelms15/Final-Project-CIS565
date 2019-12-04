@@ -21,6 +21,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/surface/marching_cubes_hoppe.h>
 #include <pcl/surface/mls.h>
+#include <pcl/visualization/pcl_visualizer.h>
 #include <string.h>
 #include <sstream>
 #include <iomanip>
@@ -188,7 +189,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	accessors[0].normalized = 0;
 	accessors[0].type = cgltf_type_scalar;
 	accessors[0].offset = 0;
-	accessors[0].count = INDICES_COUNT; // TODO: Is this right?
+	accessors[0].count = INDICES_COUNT;
 	accessors[0].stride = 0; // Must remain undefined
 	accessors[0].buffer_view = &views[0];
 	accessors[0].has_min = 0;
@@ -199,7 +200,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	accessors[1].normalized = 0;
 	accessors[1].type = cgltf_type_vec3;
 	accessors[1].offset = 0;
-	accessors[1].count = mesh.cloud.row_step / mesh.cloud.point_step; // TODO: Is this right?
+	accessors[1].count = mesh.cloud.row_step / mesh.cloud.point_step;
 	accessors[1].stride = mesh.cloud.point_step;
 	accessors[1].buffer_view = &views[1];
 	accessors[1].has_min = 1;
@@ -216,12 +217,25 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	accessors[2].normalized = 0;
 	accessors[2].type = cgltf_type_vec3;
 	accessors[2].offset = 12;
-	accessors[2].count = mesh.cloud.row_step / mesh.cloud.point_step; // TODO: Is this right?
+	accessors[2].count = mesh.cloud.row_step / mesh.cloud.point_step;
 	accessors[2].stride = mesh.cloud.point_step;
 	accessors[2].buffer_view = &views[1];
 	accessors[2].has_min = 0;
 	accessors[2].has_max = 0;
 	accessors[2].is_sparse = 0;
+	// Color
+	/*
+	accessors[3].component_type = cgltf_component_type_r_8u ;
+	accessors[3].normalized = 0;
+	accessors[3].type = cgltf_type_vec3;
+	accessors[3].offset = 24;
+	accessors[3].count = mesh.cloud.row_step / mesh.cloud.point_step;
+	accessors[3].stride = mesh.cloud.point_step;
+	accessors[3].buffer_view = &views[1];
+	accessors[3].has_min = 0;
+	accessors[3].has_max = 0;
+	accessors[3].is_sparse = 0;
+	*/
 	// Sore accessors in parent
 	data.accessors_count = 3;
 	data.accessors = accessors;
@@ -354,31 +368,19 @@ void PointCloudToMesh(
 	pcl::removeNaNFromPointCloud(*cloud, *cloud, throw_away);
 
 	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes. 
-	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGB> mls;
+	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
 	std::cout << "Before MLS: " << cloud->points.size() << std::endl;
 	tree->setInputCloud(cloud);
-	mls.setComputeNormals(false);
+	mls.setComputeNormals(true);
 	mls.setInputCloud(cloud);
 	mls.setPolynomialOrder(2);
 	mls.setSearchMethod(tree);
 	mls.setSearchRadius(0.05);
 	mls.setPolynomialFit(false); // Too much computational power needed.
-	mls.setUpsamplingMethod(pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGB>::RANDOM_UNIFORM_DENSITY);
-	mls.setPointDensity(3);
-	mls.process(*temp_cloud);
+	//mls.setUpsamplingMethod(pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal>::RANDOM_UNIFORM_DENSITY);
+	//mls.setPointDensity(1);
+	mls.process(*cloud_with_normals);
 	std::cout << "After MLS: " << temp_cloud->points.size() << std::endl;
-	
-	// Normal Estimation
-	pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
-	ne.setInputCloud(temp_cloud);
-	ne.setRadiusSearch(0.05);
-	//tree->setInputCloud(temp_cloud);
-	//ne.setSearchMethod(tree);
-	//ne.setKSearch(20);
-	ne.compute(*normals);
-	
-	// Combine into one cloud
-	pcl::concatenateFields(*temp_cloud, *normals, *cloud_with_normals);
 	
 	// Now remove any NaN normals. This will also remove the points themselves.
 	pcl::removeNaNNormalsFromPointCloud(*cloud_with_normals, *cloud_with_normals, throw_away);
@@ -392,7 +394,8 @@ void PointCloudToMesh(
 	gp3.setMaximumSurfaceAngle(M_PI/4);   // 45 degrees
 	gp3.setMinimumAngle(M_PI/18);         // 10 degrees
 	gp3.setMaximumAngle(2*M_PI/3);        // 120 degrees
-	gp3.setNormalConsistency(false);
+	gp3.setNormalConsistency(true);
+	gp3.setConsistentVertexOrdering(true);
 	gp3.setInputCloud(cloud_with_normals);
 	tree2->setInputCloud(cloud_with_normals);
 	gp3.setSearchMethod(tree2);
@@ -408,16 +411,6 @@ void PointCloudToMesh(
 // Filter out unimportant points in the cloud.
 void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 {
-	// Remove points that produce no meaninful geometries
-	// Can't remove all of them, but this should help with most.
-	std::cout << "ROR before: " << cloud->points.size() << std::endl;
-	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
-	ror.setRadiusSearch(0.01f);
-	ror.setMinNeighborsInRadius(20);
-	ror.setInputCloud(cloud);
-	ror.filter(*cloud);
-	std::cout << "ROR after: " << cloud->points.size() << std::endl;
-	
 	// Reduce points based on features
 	std::cout << "US before: " << cloud->points.size() << std::endl;
 	pcl::UniformSampling<pcl::PointXYZRGB> us;
@@ -425,6 +418,16 @@ void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 	us.setInputCloud(cloud);
 	us.filter(*cloud);
 	std::cout << "US after: " << cloud->points.size() << std::endl;
+	
+	// Remove points that produce no meaninful geometries
+	// Can't remove all of them, but this should help with most.
+	std::cout << "ROR before: " << cloud->points.size() << std::endl;
+	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
+	ror.setRadiusSearch(0.05f);
+	ror.setMinNeighborsInRadius(20);
+	ror.setInputCloud(cloud);
+	ror.filter(*cloud);
+	std::cout << "ROR after: " << cloud->points.size() << std::endl;
 }
 
 
@@ -470,6 +473,42 @@ int main(int argc, char **argv)
 	ros::Subscriber sub3 = n.subscribe("/point_cloud_G", 1000, PointCloud2Callback);
 
 	ROS_INFO("point cloud, waiting for messages");
+	
+#if 0	// PCD Load for Testing
+	// Load input file into a PointCloud<T> with an appropriate type
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PCLPointCloud2 cloud_blob;
+	pcl::io::loadPCDFile("singleFrame.pcd", cloud_blob);
+	pcl::fromPCLPointCloud2(cloud_blob, *cloud);
+
+	ROS_INFO("generating output!!");
+	pcl::PolygonMesh mesh;
+	pcl::PointXYZRGBNormal min;
+	pcl::PointXYZRGBNormal max;
+	
+	ROS_INFO("Reducing...");
+	ReducePointCloud(cloud);
+	
+	ROS_INFO("Generating Mesh...");
+	PointCloudToMesh(cloud, mesh, min, max);
+	
+	ROS_INFO("Writing to output file...");
+	WriteMeshToGLTF(mesh, min, max);
+	
+	ROS_INFO("Preview!");
+	pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+	viewer->setBackgroundColor(0, 0, 0);
+	viewer->addPolygonMesh(mesh, "mesh"); 
+	viewer->addCoordinateSystem (1.0);
+	viewer->initCameraParameters ();
+	
+	while (!viewer->wasStopped ())
+	{
+		viewer->spinOnce(100);
+	}
+	
+	ROS_INFO("Done!");
+#endif
 
 	/**
 	* ros::spin() will enter a loop, pumping callbacks.  With this version, all
