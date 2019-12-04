@@ -183,7 +183,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	// acc 0 - indicies
 	// acc 1 - position
 	// acc 2 - normals
-	cgltf_accessor* accessors = (cgltf_accessor*)malloc(sizeof(cgltf_accessor) * 3);
+	cgltf_accessor* accessors = (cgltf_accessor*)malloc(sizeof(cgltf_accessor) * 4);
 	// Indicies
 	accessors[0].component_type = cgltf_component_type_r_32u;
 	accessors[0].normalized = 0;
@@ -216,7 +216,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	accessors[2].component_type = cgltf_component_type_r_32f;
 	accessors[2].normalized = 0;
 	accessors[2].type = cgltf_type_vec3;
-	accessors[2].offset = 12;
+	accessors[2].offset = 16;
 	accessors[2].count = mesh.cloud.row_step / mesh.cloud.point_step;
 	accessors[2].stride = mesh.cloud.point_step;
 	accessors[2].buffer_view = &views[1];
@@ -224,27 +224,25 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	accessors[2].has_max = 0;
 	accessors[2].is_sparse = 0;
 	// Color
-	/*
 	accessors[3].component_type = cgltf_component_type_r_8u ;
-	accessors[3].normalized = 0;
+	accessors[3].normalized = 1;
 	accessors[3].type = cgltf_type_vec3;
-	accessors[3].offset = 24;
+	accessors[3].offset = 32;
 	accessors[3].count = mesh.cloud.row_step / mesh.cloud.point_step;
 	accessors[3].stride = mesh.cloud.point_step;
 	accessors[3].buffer_view = &views[1];
 	accessors[3].has_min = 0;
 	accessors[3].has_max = 0;
 	accessors[3].is_sparse = 0;
-	*/
 	// Sore accessors in parent
-	data.accessors_count = 3;
+	data.accessors_count = 4;
 	data.accessors = accessors;
 	
 	///////////////////////////////////////////////////
 	// Attributes
 	// 0 - Position
 	// 1 - Normals
-	cgltf_attribute* attributes = (cgltf_attribute*)malloc(sizeof(cgltf_attribute) * 2);
+	cgltf_attribute* attributes = (cgltf_attribute*)malloc(sizeof(cgltf_attribute) * 3);
 	// Position
 	attributes[0].name = "POSITION";
 	attributes[0].type = cgltf_attribute_type_position;
@@ -255,6 +253,11 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	attributes[1].type = cgltf_attribute_type_normal;
 	attributes[1].index = 2;
 	attributes[1].data = &accessors[2];
+	// Color
+	attributes[2].name = "COLOR_0";
+	attributes[2].type = cgltf_attribute_type_color;
+	attributes[2].index = 3;
+	attributes[2].data = &accessors[3];
 
 	///////////////////////////////////////////////////
 	// Primitives
@@ -264,7 +267,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	prim[0].indices = &accessors[0];
 	prim[0].material = NULL;
 	prim[0].attributes = attributes;
-	prim[0].attributes_count = 2;
+	prim[0].attributes_count = 3;
 	prim[0].targets = NULL;
 	prim[0].targets_count = 0;
 
