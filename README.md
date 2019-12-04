@@ -225,26 +225,6 @@ you should see the point could ros node print data as well as the bag. to see wh
 rosbag info <your bag>
 ```
 
-### Downloading the MIT Dataset 
-
-I've set up a python script for downloading a subsection of the mit dataset. You may need to run the following commands to get it to run:
-```
-sudo apt-get install pip3
-pip3 install wget
-```
-
-To use it, navigate to a subfolder of the [MIT Blackbird Dataset Download Site](http://blackbird-dataset.mit.edu/BlackbirdDatasetData/) that you wish to install, and copy the URL of that folder. Then you can run:
-
-```
-python3 downloadMitSubfolder.py [-o OutputdirectoryName] URL_Path_To_Recursively_Download
-```
-
-This will download all the relevant files to a given directory root. Example usage:
-
-```
-python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatasetData/clover/yawConstant/maxSpeed2p0/ -o../Datasets/Clover/maxSpeed2p0/
-```
-
 # References
 
 * [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
