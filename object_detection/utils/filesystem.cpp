@@ -27,6 +27,8 @@ std::string locateFile( const std::string& path, std::vector<std::string>& locat
 
 	locations.push_back("/home/slothjet/CIS565/droneMoM_ws/src/Final-Project-CIS565/object_detection/data");
 	locations.push_back("/home/slothjet/CIS565/droneMoM_ws/src/Final-Project-CIS565/object_detection/data/");
+	locations.push_back("/home/taylor/cis565/droneMoM_ws/src/repo/object_detection/data");
+	locations.push_back("/home/taylor/cis565/droneMoM_ws/src/repo/object_detection/data/");
 
 	// check each location until the file is found
 	const size_t numLocations = locations.size();

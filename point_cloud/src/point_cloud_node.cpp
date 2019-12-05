@@ -7,15 +7,17 @@
 #define DEBUGIMAGE (DEBUGOUT && 1)
 #define DEBUGXFORM (DEBUGOUT && 0)
 
-#define WRITING_PICS 1
+#define WRITING_PICS 0
 
-#define SKIPFRAMENUM 4
-#define ENDFRAMENUM 24
+#define ENDFRAMENUM 20
+
+#define USING_DRONEMOM_MSG 1
 
 using namespace cv;
 using namespace cv::xfeatures2d;
 
 
+    const static char dronemomSubPath[] = "detectnet/detections";
     const static char imageSubPath[]    = "camera/rgb/image_raw";
     const static char camInfoSubPath[]  = "camera/rgb/camera_info";
     const static char dimageSubPath[]   = "camera/depth/image_raw";
@@ -236,7 +238,7 @@ using namespace cv::xfeatures2d;
 
     }//getValidPoints
 
-    #define SCALING (1.0/1000.0)
+    #define SCALING (1.0/256.0)
     void putValidPointsIntoCameraSpace(const Point2f_vec validPoints, const Point2f_vec validPointsU,
                                         gvec3_vec& pointsCamspace, gvec3_vec& colorsCamspace,
                                         const Mat imgCU, const Mat depthMat,
@@ -277,7 +279,7 @@ using namespace cv::xfeatures2d;
         tf2::Transform camToWorld = xformC * xformG;
         for(int i = 0; i < pointsCamspace.size(); i++){
             gvec3 camvec        = pointsCamspace.at(i);
-            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, camvec.z, camvec.y);//NOTE THE SWITCHED VALUES HERE
+            tf2::Vector3 camvecT    = tf2::Vector3(camvec.x, -camvec.z, -camvec.y);//NOTE THE SWITCHED VALUES HERE (x, -z, -y) sorta worked
             tf2::Vector3 worldvecT  = camToWorld(camvecT);
             gvec3 worldvec      = gvec3(worldvecT.x(), worldvecT.y(), worldvecT.z());
             pointsWorldspace.push_back(worldvec);
@@ -294,10 +296,6 @@ using namespace cv::xfeatures2d;
                         sensor_msgs::CameraInfo camInfoD
                         ){
         ROS_INFO("===MATCHED IMAGES CALLBACK===");
-        if (numMatches % SKIPFRAMENUM == 0){
-            numMatches++;
-            return PointT_vec();
-        }//if
         numMatches++;
 
         Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
@@ -355,12 +353,13 @@ using namespace cv::xfeatures2d;
         }//for
 
 
-        pcl::io::savePCDFile("testOutput.pcd", pcloud);
+        //pcl::io::savePCDFile("testOutput.pcd", pcloud);
         //Reset our FSM for "waiting for image data"
         imgprogress = Free;
 
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
+            pcl::io::savePCDFile("testOutput.pcd", pcloud);
             ROS_INFO("Successfully ran %d matches", numMatches);
         }//if
         return retval;
@@ -378,6 +377,37 @@ using namespace cv::xfeatures2d;
     //########################
     // ROS CALLBACKS
     //########################
+
+    void DetectionCallback(const drone_mom_msgs::drone_mom::ConstPtr msg){
+        //unpack the parts of this message that I want
+        sensor_msgs::CameraInfo dcaminfo = msg->depth_camera_info;
+        sensor_msgs::CameraInfo ccaminfo = msg->rgb_camera_info;
+        int dwidth = msg->depth_image.width;
+        int dheight = msg->depth_image.height;
+        Mat dImage = Mat(dheight, dwidth, getEncodingTypeForCV(msg->depth_image.encoding), 
+                         (void*) msg->depth_image.data.data(), msg->depth_image.step);
+        int cwidth = msg->rgb_image.width;
+        int cheight = msg->rgb_image.height;
+        Mat cImage = Mat(cheight, cwidth, getEncodingTypeForCV(msg->rgb_image.encoding), 
+                         (void*) msg->rgb_image.data.data(), msg->rgb_image.step);
+        tf2::Transform xformD, xformC, xformG;
+        tf2::fromMsg(msg->TIC_depth.transform, xformD);
+        tf2::fromMsg(msg->TIC_color.transform, xformC);
+        tf2::fromMsg(msg->TGI.transform, xformG);
+        
+        //TODO: deal with classification bullshit
+
+
+        //make our direction offset point for the "WTF" questions
+        makeDirectionOffsetPoint(xformG, 0, 0, 0, 255, 0, 255);
+        //Pass messages on to our point-cloud-making machine
+        PointT_vec bunchOfPoints = pointsFromRGBD(cImage, dImage,
+            xformC, xformD, xformG,
+            ccaminfo, dcaminfo);
+
+
+        ROS_INFO("===DRONEMOM MESSAGE==");
+    }//void
 
     void DCameraInfoCallback(sensor_msgs::CameraInfo msg){
         dcaminfo = sensor_msgs::CameraInfo(msg);
@@ -554,6 +584,11 @@ using namespace cv::xfeatures2d;
       * away the oldest ones.
       */
 
+        #if USING_DRONEMOM_MSG
+        ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 1000, DetectionCallback);
+
+        #else
+
         ros::Subscriber cameraSub       = n.subscribe(imageSubPath, 1000, ImageCallback);
         ros::Subscriber dcameraSub      = n.subscribe(dimageSubPath, 1000, DImageCallback);
         
@@ -563,6 +598,8 @@ using namespace cv::xfeatures2d;
         ros::Subscriber xformGlobalSub  = n.subscribe(xformSubPath1, 1000, TransformCallbackG);
         ros::Subscriber xformColorSub   = n.subscribe(xformSubPathC, 1000, TransformCallbackC);
         ros::Subscriber xformDepthSub   = n.subscribe(xformSubPathD, 1000, TransformCallbackD);
+
+        #endif
 
         float array1[32];
         float array2[32];

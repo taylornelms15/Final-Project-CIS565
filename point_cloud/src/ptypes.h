@@ -29,6 +29,7 @@ Should have few dependencies, be common to most functions we use
 #include <geometry_msgs/TransformStamped.h>
 #include <vision_msgs/Detection2DArray.h>
 #include <vision_msgs/VisionInfo.h>
+#include <drone_mom_msgs/drone_mom.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Transform.h>

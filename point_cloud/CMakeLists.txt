@@ -16,6 +16,7 @@ find_package(glm REQUIRED)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  drone_mom_msgs
   roscpp
   sensor_msgs
   std_msgs
@@ -114,12 +115,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-#catkin_package(
+catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES point_cloud
 #  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs
 #  DEPENDS system_lib
-#)
+)
 
 ###########
 ## Build ##
