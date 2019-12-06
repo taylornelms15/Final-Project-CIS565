@@ -85,7 +85,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_
 	}
 
 	// if objects were detected, send out message
-	if( numDetections > 0 )
+	if( numDetections >= 0 )
 	{
 		//ROS_INFO("detected %i objects in %ux%u image", numDetections, input->width, input->height);
 		
