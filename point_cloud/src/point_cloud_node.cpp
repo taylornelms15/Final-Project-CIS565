@@ -8,10 +8,14 @@
 #define DEBUGXFORM (DEBUGOUT && 0)
 
 #define WRITING_PICS 0
-
-#define ENDFRAMENUM 20
-
 #define USING_DRONEMOM_MSG 1
+
+#define ENDFRAMENUM 18
+#define SKIPFRAMES 2
+
+//This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
+//#define SCALING (65535 / (4.0 * 1000.0))//1/256 also seemed close, so we could be way off the mark
+#define SCALING (1 / 256.0)
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -238,7 +242,6 @@ using namespace cv::xfeatures2d;
 
     }//getValidPoints
 
-    #define SCALING (1.0/256.0)
     void putValidPointsIntoCameraSpace(const Point2f_vec validPoints, const Point2f_vec validPointsU,
                                         gvec3_vec& pointsCamspace, gvec3_vec& colorsCamspace,
                                         const Mat imgCU, const Mat depthMat,
@@ -295,8 +298,11 @@ using namespace cv::xfeatures2d;
                         sensor_msgs::CameraInfo camInfoC,
                         sensor_msgs::CameraInfo camInfoD
                         ){
-        ROS_INFO("===MATCHED IMAGES CALLBACK===");
         numMatches++;
+        if (numMatches % SKIPFRAMES != 0){
+            return PointT_vec();
+        }//if
+        ROS_INFO("===MATCHED IMAGES CALLBACK===");
 
         Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
         Mat dC  = distCoeffsFromCamInfo(camInfoC);
@@ -395,18 +401,21 @@ using namespace cv::xfeatures2d;
         tf2::fromMsg(msg->TIC_color.transform, xformC);
         tf2::fromMsg(msg->TGI.transform, xformG);
         
+        ROS_INFO("===DRONEMOM MESSAGE==");
         //TODO: deal with classification bullshit
 
 
         //make our direction offset point for the "WTF" questions
         makeDirectionOffsetPoint(xformG, 0, 0, 0, 255, 0, 255);
+        makeDirectionOffsetPoint(xformG, 0.01, 0, 0, 255, 0, 0);
+        makeDirectionOffsetPoint(xformG, 0, 0.01, 0, 0, 255, 0);
+        makeDirectionOffsetPoint(xformG, 0, 0, 0.01, 0, 0, 255);
         //Pass messages on to our point-cloud-making machine
         PointT_vec bunchOfPoints = pointsFromRGBD(cImage, dImage,
             xformC, xformD, xformG,
             ccaminfo, dcaminfo);
 
 
-        ROS_INFO("===DRONEMOM MESSAGE==");
     }//void
 
     void DCameraInfoCallback(sensor_msgs::CameraInfo msg){
