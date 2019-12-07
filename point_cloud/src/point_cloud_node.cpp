@@ -10,7 +10,7 @@
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM 5
+#define ENDFRAMENUM 2
 #define SKIPFRAMES  1
 
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
@@ -36,6 +36,7 @@ using namespace cv::xfeatures2d;
     ///Global point cloud
     static pcl::PointCloud<PointT> pcloud       = pcl::PointCloud<PointT>(); 
     static pcl::PointCloud<PointT> prevcloud    = pcl::PointCloud<PointT>();
+    static tf2::Transform          prevxform;
 
     static int                          numMatches  = 0;
 
@@ -256,7 +257,6 @@ using namespace cv::xfeatures2d;
             retval.push_back(nextPoint);
         }//for
 
-
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
             pcl::io::savePCDFile("testOutput.pcd", pcloud);
@@ -330,6 +330,19 @@ using namespace cv::xfeatures2d;
         PointT_vec bunchOfPoints = pointsFromRGBD(cImage, dImage,
             xformC, xformD, xformG,
             ccaminfo, dcaminfo);
+
+        if (numMatches == 1){
+            //move our retval to our point cloud
+            for(int i = 0; i < bunchOfPoints.size(); i++){
+                prevcloud.push_back(bunchOfPoints[i]);
+            }//for
+            prevxform = xformC * xformG;
+        }//if first frame
+        else{
+            //TODO: try some point cloud alignment
+            //alignClouds(prevcloud, bunchOfPoints);
+
+        }//else, align some stuff
 
 
     }//void
