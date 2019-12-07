@@ -357,10 +357,6 @@
         makeDirectionOffsetPoint(thisXform, 0, 0, -.01, 0, 255, 0);
         makeDirectionOffsetPoint(thisXform, -.01, 0, 0, 0, 0, 255);
         //testing other xform direction
-        //makeDirectionOffsetPoint(otherXform, 0, 0, 0, 255, 255, 0);
-        //makeDirectionOffsetPoint(otherXform, 0, .01, 0, 200, 110, 110);
-        //makeDirectionOffsetPoint(otherXform, 0, 0, -.01, 110, 200, 110);
-        //makeDirectionOffsetPoint(otherXform, -.01, 0, 0, 110, 110, 200);
 
 
         //Pass messages on to our point-cloud-making machine
