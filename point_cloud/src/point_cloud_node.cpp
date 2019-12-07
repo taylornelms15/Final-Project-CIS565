@@ -10,11 +10,11 @@
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM 125
-#define SKIPFRAMES 25
+#define ENDFRAMENUM 5
+#define SKIPFRAMES  1
 
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
-#define SCALING (81.0/65535.0)//1/256 also seemed close, so we could be way off the mark
+#define SCALING (100.0/65535.0)//1/256 also seemed close, so we could be way off the mark
 //#define SCALING (1000.0 / 65535)
 
 using namespace cv;
@@ -30,25 +30,15 @@ using namespace cv::xfeatures2d;
     const static char xformSubPathC[]   = "tango/T_I_C_color";//tranformation for color camera
     const static char xformSubPathD[]   = "tango/T_I_C_depth";//tranformation for depth camera
     
-    static double                       xformTime = -1;
-    static bool                         found1stXform       = false;
-    static bool                         found1stCaminfo     = false;
-    static bool                         found1stDCaminfo    = false;
-    static tf2::Transform               xform;
-    static tf2::Transform               xformColor;
-    static tf2::Transform               xformDepth;
     static sensor_msgs::CameraInfo      caminfo;
     static sensor_msgs::CameraInfo      dcaminfo;
-    static pcl::PointCloud<PointT> pcloud = pcl::PointCloud<PointT>(); 
 
-    static Mat imageC;
-    static Mat imageD;
-    enum Imgprogress{Free, WaitC, WaitD};
-    static Imgprogress                  imgprogress = Free;
+    ///Global point cloud
+    static pcl::PointCloud<PointT> pcloud       = pcl::PointCloud<PointT>(); 
+    static pcl::PointCloud<PointT> prevcloud    = pcl::PointCloud<PointT>();
+
     static int                          numMatches  = 0;
 
-    static std::deque<Mat> imgqueue                 = std::deque<Mat>();
-    static std::deque<tf2::Transform> xformqueue    = std::deque<tf2::Transform>();
 
 
     /**
@@ -247,6 +237,7 @@ using namespace cv::xfeatures2d;
 
         //Next step: transform into world space
         gvec3_vec pointsWorldspace = cameraToWorldSpace(pointsCamspace, xformC, xformG);
+        //gvec3_vec pointsWorldspace = pointsCamspace;
 
         //create color factor (for debugging)
         gvec3 factorF = gvec3(1.0, 0.99, 0.99); gvec3 factor = gvec3(1.0, 1.0, 1.0);
@@ -254,7 +245,7 @@ using namespace cv::xfeatures2d;
             factor *= factorF;
         }//for
 
-        //Next step: push into our point cloud
+        //Next step: push into our global point cloud
         PointT_vec retval = PointT_vec();
         for (int i = 0; i < colorsCamspace.size(); i++){
             gvec3 color = colorsCamspace.at(i) * factor;
@@ -265,10 +256,6 @@ using namespace cv::xfeatures2d;
             retval.push_back(nextPoint);
         }//for
 
-
-        //pcl::io::savePCDFile("testOutput.pcd", pcloud);
-        //Reset our FSM for "waiting for image data"
-        imgprogress = Free;
 
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
@@ -315,30 +302,28 @@ using namespace cv::xfeatures2d;
         tf2::fromMsg(msg->TIC_color.transform, xformC);
         tf2::fromMsg(msg->TGI.transform, xformG);
         
-        char filenameC[100]; std::sprintf(filenameC, "color_image%d.png", numMatches);
-        imwrite(filenameC, cImage);
+        //char filenameC[100]; std::sprintf(filenameC, "color_image%d.png", numMatches);
+        //imwrite(filenameC, cImage);
 
         ROS_INFO("===DRONEMOM MESSAGE==");
         //TODO: deal with classification bullshit
 
 
-        if (numMatches % 2 == 0){
-            //make our direction offset point for the "WTF" questions
-            tf2::Transform thisXform = xformC * xformG;
-            tf2::Transform otherXform = xformG;
-            makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
-            //makeDirectionOffsetPoint(thisXform, .01, 0, 0, 255, 0, 0);
-            //makeDirectionOffsetPoint(thisXform, 0, .01, 0, 0, 255, 0);
-            //makeDirectionOffsetPoint(thisXform, 0, 0, .01, 0, 0, 255);
-            makeDirectionOffsetPoint(thisXform, 0, .01, 0, 255, 0, 0);
-            makeDirectionOffsetPoint(thisXform, 0, 0, -.01, 0, 255, 0);
-            makeDirectionOffsetPoint(thisXform, -.01, 0, 0, 0, 0, 255);
-            //testing other xform direction
-            //makeDirectionOffsetPoint(otherXform, 0, 0, 0, 255, 255, 0);
-            //makeDirectionOffsetPoint(otherXform, 0, .01, 0, 200, 110, 110);
-            //makeDirectionOffsetPoint(otherXform, 0, 0, -.01, 110, 200, 110);
-            //makeDirectionOffsetPoint(otherXform, -.01, 0, 0, 110, 110, 200);
-        }
+        //make our direction offset point for the "WTF" questions
+        tf2::Transform thisXform = xformC * xformG;
+        tf2::Transform otherXform = xformG;
+        makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
+        //makeDirectionOffsetPoint(thisXform, .01, 0, 0, 255, 0, 0);
+        //makeDirectionOffsetPoint(thisXform, 0, .01, 0, 0, 255, 0);
+        //makeDirectionOffsetPoint(thisXform, 0, 0, .01, 0, 0, 255);
+        makeDirectionOffsetPoint(thisXform, 0, .01, 0, 255, 0, 0);
+        makeDirectionOffsetPoint(thisXform, 0, 0, -.01, 0, 255, 0);
+        makeDirectionOffsetPoint(thisXform, -.01, 0, 0, 0, 0, 255);
+        //testing other xform direction
+        //makeDirectionOffsetPoint(otherXform, 0, 0, 0, 255, 255, 0);
+        //makeDirectionOffsetPoint(otherXform, 0, .01, 0, 200, 110, 110);
+        //makeDirectionOffsetPoint(otherXform, 0, 0, -.01, 110, 200, 110);
+        //makeDirectionOffsetPoint(otherXform, -.01, 0, 0, 110, 110, 200);
 
 
         //Pass messages on to our point-cloud-making machine
