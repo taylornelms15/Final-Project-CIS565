@@ -11,14 +11,16 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  cv_bridge
   vision_msgs
+  drone_mom_msgs
 )
 
 find_package(PCL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -108,7 +110,7 @@ find_package(PCL REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES mesh_construction
-#  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs
+#  CATKIN_DEPENDS roscpp sensor_msgs std_msgs vision_msgs drone_mom_msgs
 #  DEPENDS system_lib
 )
 
@@ -142,7 +144,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME} src/mesh_construct_node.cpp)
-
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -157,6 +159,7 @@ add_executable(${PROJECT_NAME} src/mesh_construct_node.cpp)
  target_link_libraries(
    ${PROJECT_NAME}
    ${catkin_LIBRARIES}
+   ${OpenCV_LIBS} 
  )
  target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES})
 

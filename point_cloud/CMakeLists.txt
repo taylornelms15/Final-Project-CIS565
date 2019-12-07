@@ -2,19 +2,27 @@ cmake_minimum_required(VERSION 2.8.3)
 project(point_cloud)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
 
-find_package(OpenCV REQUIRED)
+set("OpenCV_DIR" "/usr/local/share/opencv4")
+find_package(Eigen3 REQUIRED)
+find_package(Ceres REQUIRED)
+find_package(OpenCV REQUIRED PATHS /usr/local/share)
 find_package(CUDA REQUIRED)
+find_package(glm REQUIRED)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  drone_mom_msgs
   roscpp
   sensor_msgs
   std_msgs
   vision_msgs
+  pcl_ros
+  tf2_geometry_msgs
+  tf2_eigen
 )
 
 find_package(PCL REQUIRED)
@@ -27,6 +35,7 @@ find_package(PCL REQUIRED)
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
+
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -126,9 +135,15 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
 
-include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+list(APPEND CUDA_NVCC_FLAGS ${CUDA_GENERATE_CODE})
+#set(CUDA_VERBOSE_BUILD ON)
+#-Xcudafe="--diag_suppress=2886" #this, when added to nvcc flags, may suppress some of the bs warnings
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -140,10 +155,37 @@ include_directories(${PCL_INCLUDE_DIRS})
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+set(cudasources
+    src/pointMatcher.cu
+)
+
+set(sources
+    src/point_cloud_node.cpp
+)
+
+set(headers
+    src/ptypes.h
+    src/point_cloud_node.h
+    src/pointMatcher.h
+)
+
+list(SORT sources)
+list(SORT headers)
+
+source_group(Sources FILES ${sources} ${cudasources})
+source_group(Headers FILES ${headers})
+
+# Make a CUDA library
+set(LIB_TYPE STATIC)
+cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
+
+
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME} src/point_cloud_node.cpp)
+add_executable(${PROJECT_NAME} ${sources} ${headers})
+add_dependencies(${PROJECT_NAME} CudaLibrary)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,9 +198,10 @@ add_executable(${PROJECT_NAME} src/point_cloud_node.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} )
- target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} )
- target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} )
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} CudaLibrary)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 #############
 ## Install ##
 #############
