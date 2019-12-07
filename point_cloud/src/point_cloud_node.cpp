@@ -343,7 +343,6 @@
         //imwrite(filenameC, cImage);
 
         ROS_INFO("===DRONEMOM MESSAGE==");
-        //TODO: deal with classification bullshit
 
 
         //make our direction offset point for the "WTF" questions
