@@ -13,8 +13,8 @@ Should have few dependencies, be common to most functions we use
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
+//#include <opencv2/features2d.hpp>
+//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/rgbd.hpp>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/LinearMath/Transform.h>
@@ -35,10 +35,12 @@ Should have few dependencies, be common to most functions we use
 #include <tf2/LinearMath/Transform.h>
 
 
-using namespace cv;
-using namespace cv::xfeatures2d;
 
 //vector typedefs
+typedef cv::KeyPoint KeyPoint;
+typedef cv::DMatch DMatch;
+typedef cv::Point2f Point2f;
+typedef cv::Vec3b Vec3b;
 typedef std::vector<Point2f> Point2f_vec;
 typedef std::vector<float> float_vec;
 typedef std::vector<double> double_vec;

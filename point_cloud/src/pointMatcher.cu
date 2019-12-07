@@ -188,132 +188,13 @@ float testCudaFunctionality(float* arrayOne, float* arrayTwo){
 /**
 Converts an (x,y) coordinate to the relevant RGB value in the image
 */
-__host__ Vec3b coordToColor(Mat img, Point2f coord){
-    return img.at<Vec3b>(coord);//is it this easy?
+__host__ cv::Vec3b coordToColor(cv::Mat img, Point2f coord){
+    return img.at<cv::Vec3b>(coord);//is it this easy?
     float col = coord.x;
     float row = coord.y;//img.rows - coord.y;//top-down vs bottom-up conversion
-    return img.at<Vec3b>((int)(row + 0.5f), (int)(col + 0.5));
+    return img.at<cv::Vec3b>((int)(row + 0.5f), (int)(col + 0.5));
 
 }//coordToColor
-
-void getCameraIntrinsicMatrix(
-        Mat                     img1,
-        std::vector<KeyPoint>   keypoints1,
-        tf2::Transform          xform1,
-        Mat                     img2,
-        std::vector<KeyPoint>   keypoints2,
-        tf2::Transform          xform2,
-        std::vector<DMatch>     good_matches,
-        Mat*                    output
-){
-    Mat retval = Mat();
-    tf2::Vector3 o1 = xform1.getOrigin();
-    tf2::Vector3 o2 = xform2.getOrigin();
-    tf2::Quaternion r1 = xform1.getRotation();
-    tf2::Quaternion r2 = xform2.getRotation();
-    std::vector<Point2f> img1Points = std::vector<Point2f>();
-    std::vector<Point2f> img2Points = std::vector<Point2f>();
-    printf("==MATCHES==\n");
-    for (int i = 0; i < good_matches.size(); i++){
-        KeyPoint img1pt = keypoints1[good_matches[i].trainIdx];
-        KeyPoint img2pt = keypoints2[good_matches[i].queryIdx];
-        img1Points.push_back(img1pt.pt);
-        img2Points.push_back(img2pt.pt);
-    }
-    Mat fundamental = findFundamentalMat(img1Points, img2Points, FM_RANSAC);
-    Mat H1, H2;
-    stereoRectifyUncalibrated(img1Points, img2Points, fundamental, Size(img1.cols, img1.rows), H1, H2);
-
-
-    *output = Mat(retval);
-}
-
-std::vector<PointSub> getMatchingWorldPointsAlt(
-        Mat                     img1,
-        std::vector<KeyPoint>   keypoints1,
-        tf2::Transform          xform1,
-        Mat                     img2,
-        std::vector<KeyPoint>   keypoints2,
-        tf2::Transform          xform2,
-        std::vector<DMatch>     good_matches,
-        float                   FoV)
-{
-    std::vector<PointSub> retval = std::vector<PointSub>();
-    std::vector<Point2f> img1Points = std::vector<Point2f>();
-    std::vector<Point2f> img2Points = std::vector<Point2f>();
-    printf("==MATCHES==\n");
-    for (int i = 0; i < good_matches.size(); i++){
-        KeyPoint img1pt = keypoints1[good_matches[i].trainIdx];
-        KeyPoint img2pt = keypoints2[good_matches[i].queryIdx];
-        img1Points.push_back(img1pt.pt);
-        img2Points.push_back(img2pt.pt);
-    }
-    Mat fundamental = findFundamentalMat(img1Points, img2Points, FM_RANSAC);
-    Mat H1, H2;
-    stereoRectifyUncalibrated(img1Points, img2Points, fundamental, Size(img1.cols, img1.rows), H1, H2);
-    //std::vector<Vec3f> lines1, lines2;
-    //computeCorrespondEpilines(img1Points, 1, fundamental, lines1);
-    //computeCorrespondEpilines(img2Points, 2, fundamental, lines2);
-
-
-    return retval;
-}//getMathingWorldPointsAlt
-
-std::vector<PointSub> getMatchingWorldPoints(
-        Mat                     img1,
-        std::vector<KeyPoint>   keypoints1,
-        tf2::Transform          xform1,
-        Mat                     img2,
-        std::vector<KeyPoint>   keypoints2,
-        tf2::Transform          xform2,
-        std::vector<DMatch>     good_matches,
-        float                   FoV)
-{
-    std::vector<PointSub> retval = std::vector<PointSub>();
-    //Keypoints: given in (x, y) coordinates (scaled as pixels, origin bottom left (likely)
-    //good_matches: given in (query, train) pairs: indices of the keypoints1 and keypoints2 entries
-
-    std::vector<PointSub> img1Points = std::vector<PointSub>();//not the actual world points
-    std::vector<PointSub> img2Points = std::vector<PointSub>();//not the actual world points
-    printf("==MATCHES==\n");
-    for (int i = 0; i < good_matches.size(); i++){
-        KeyPoint img1pt = keypoints1[good_matches[i].trainIdx];
-        KeyPoint img2pt = keypoints2[good_matches[i].queryIdx];
-        PointSub pt1, pt2;
-        pt1.x = img1pt.pt.x; pt1.y = /*img1.rows -*/ img1pt.pt.y;
-        pt2.x = img2pt.pt.x; pt2.y = /*img1.rows -*/ img2pt.pt.y;
-        Vec3b col1 = coordToColor(img1, img1pt.pt);
-        Vec3b col2 = coordToColor(img2, img2pt.pt);
-        pt1.b = col1[0]; pt1.g = col1[1]; pt1.r = col1[2];
-        pt2.b = col2[0]; pt2.g = col2[1]; pt2.r = col2[2];
-        img1Points.push_back(pt1);
-        img2Points.push_back(pt2);
-    }
-
-    int width = img1.cols;
-    int height = img1.rows;
-
-    float totalDist = 0.0f;
-
-    for(int i = 0; i < img1Points.size(); i++){
-        float distance;
-        PointSub resultMatch = matchTwoPoints(img1Points.at(i), xform1,
-                                              img2Points.at(i), xform2,
-                                              FoV,
-                                              &distance,
-                                              width, height);
-        if (distance < DIST_THRESH){
-            retval.push_back(resultMatch); 
-            totalDist += distance;
-        }
-    }//for
-
-    printf("\tAvg distance %f\n", totalDist / retval.size());
-
-
-
-    return retval;
-}//getMatchingWorldPoints
 
 
 

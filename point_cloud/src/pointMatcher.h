@@ -13,8 +13,8 @@
 
 #include "ptypes.h"
 
-using namespace cv;
-using namespace cv::xfeatures2d;
+//using namespace cv;
+//using namespace cv::xfeatures2d;
 
 #define FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define checkCUDAError(msg) checkCUDAErrorFn(msg, FILENAME, __LINE__)
@@ -40,22 +40,23 @@ typedef struct PointSub{
 
 
 
+/*
 void getCameraIntrinsicMatrix(
-        Mat                     img1,
+        cv::Mat                     img1,
         std::vector<KeyPoint>   keypoints1,
         tf2::Transform          xform1,
-        Mat                     img2,
+        cv::Mat                     img2,
         std::vector<KeyPoint>   keypoints2,
         tf2::Transform          xform2,
         std::vector<DMatch>     good_matches,
-        Mat*                    output
+        cv::Mat*                    output
 );
 
 std::vector<PointSub> getMatchingWorldPoints(
-        Mat                     img1,
+        cv::Mat                     img1,
         std::vector<KeyPoint>   keypoints1,
         tf2::Transform          xform1,
-        Mat                     img2,
+        cv::Mat                     img2,
         std::vector<KeyPoint>   keypoints2,
         tf2::Transform          xform2,
         std::vector<DMatch>     good_matches,
@@ -63,15 +64,16 @@ std::vector<PointSub> getMatchingWorldPoints(
 );
 
 std::vector<PointSub> getMatchingWorldPointsAlt(
-        Mat                     img1,
+        cv::Mat                     img1,
         std::vector<KeyPoint>   keypoints1,
         tf2::Transform          xform1,
-        Mat                     img2,
+        cv::Mat                     img2,
         std::vector<KeyPoint>   keypoints2,
         tf2::Transform          xform2,
         std::vector<DMatch>     good_matches,
         float                   FoV
 );
+*/
 
 /**
 A dumb test function to run a 32-element dot product

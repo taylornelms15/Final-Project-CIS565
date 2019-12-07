@@ -6,6 +6,7 @@
 #define DEBUGCAMINFO (DEBUGOUT && 0)
 #define DEBUGIMAGE (DEBUGOUT && 1)
 #define DEBUGXFORM (DEBUGOUT && 0)
+#define DEBUGCLOUD (DEBUGOUT && 1)
 
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
@@ -17,8 +18,8 @@
 #define SCALING (100.0/65535.0)//1/256 also seemed close, so we could be way off the mark
 //#define SCALING (1000.0 / 65535)
 
-using namespace cv;
-using namespace cv::xfeatures2d;
+//using namespace cv;
+//using namespace cv::xfeatures2d;
 
 
     const static char dronemomSubPath[] = "detectnet/detections";
@@ -34,21 +35,28 @@ using namespace cv::xfeatures2d;
     static sensor_msgs::CameraInfo      dcaminfo;
 
     ///Global point cloud
-    static pcl::PointCloud<PointT> pcloud       = pcl::PointCloud<PointT>(); 
-    static pcl::PointCloud<PointT> prevcloud    = pcl::PointCloud<PointT>();
+    static PointT_cloud pcloud       = PointT_cloud(); 
+    static PointT_cloud prevcloud    = PointT_cloud();
     static tf2::Transform          prevxform;
 
     static int                          numMatches  = 0;
 
 
+    /**
+    Gets the relative transform between two transforms in terms of a tf2::Transform
+    */
+    tf2::Transform relativeRotateAndTranslateT(tf2::Transform xform1, tf2::Transform xform2){
+        tf2::Vector3 transDiff      = xform2.getOrigin() - xform1.getOrigin();
+        tf2::Quaternion rotDiff     = xform2.getRotation() * xform1.getRotation().inverse();
+        tf2::Transform xDiff        = tf2::Transform(rotDiff, transDiff);
+        return xDiff;
+    }//relativeRotateAndTranslateT
 
     /**
     Gets the relative transform between two transforms in terms of floats
     */
     double_vec relativeRotateAndTranslate(tf2::Transform xform1, tf2::Transform xform2){
-        tf2::Vector3 transDiff      = xform2.getOrigin() - xform1.getOrigin();
-        tf2::Quaternion rotDiff     = xform2.getRotation() * xform1.getRotation().inverse();
-        tf2::Transform xDiff        = tf2::Transform(rotDiff, transDiff);
+        tf2::Transform xDiff        = relativeRotateAndTranslateT(xform1, xform2);
         tf2Scalar raw[15];
         xDiff.getOpenGLMatrix(raw);//first 12 elements rotation, last 3 elements translation
         double_vec retval(15);
@@ -60,11 +68,11 @@ using namespace cv::xfeatures2d;
     }//relativeRotateAndTranslate
 
     /**
-    Same as above, but puts the results into a Mat like opencv wants it
+    Same as above, but puts the results into a cv::Mat like opencv wants it
     */
-    Mat relativeRotateAndTranslateM(tf2::Transform xform1, tf2::Transform xform2){
+    cv::Mat relativeRotateAndTranslateM(tf2::Transform xform1, tf2::Transform xform2){
         double_vec raw = relativeRotateAndTranslate(xform1, xform2);
-        Mat retval = Mat(4, 4, CV_64F);
+        cv::Mat retval = cv::Mat(4, 4, CV_64F);
         for(int i = 0; i < 4; i++){
             for(int j = 0; j < 4; j++){
                 if (i == 3){
@@ -89,8 +97,8 @@ using namespace cv::xfeatures2d;
     This turns the "camera distortion" part of the message into a format that opencv might like
     We're assuming no translational distortion, gods help us...
     */
-    Mat distCoeffsFromCamInfo(sensor_msgs::CameraInfo camInfo){
-        Mat retval = Mat(1, 5, CV_64F);
+    cv::Mat distCoeffsFromCamInfo(sensor_msgs::CameraInfo camInfo){
+        cv::Mat retval = cv::Mat(1, 5, CV_64F);
         if (camInfo.D.size() >= 5){
             for (int i = 0; i < 5; i++){
                 retval.at<double>(0, i) = camInfo.D[i];
@@ -109,8 +117,8 @@ using namespace cv::xfeatures2d;
     /**
     Copies the intrinsic matrix to a format that opencv likes
     */
-    Mat kFromCamInfo(sensor_msgs::CameraInfo camInfo){
-        Mat retval = Mat(3, 3, CV_64F);
+    cv::Mat kFromCamInfo(sensor_msgs::CameraInfo camInfo){
+        cv::Mat retval = cv::Mat(3, 3, CV_64F);
         for(int i = 0; i < 3; i++){
             for (int j = 0; j < 3; j++){
                 retval.at<double>(i, j) = camInfo.K[3 * i + j];
@@ -120,18 +128,18 @@ using namespace cv::xfeatures2d;
     }//kFromCamInfo
 
 
-    Mat undistortColor(const Mat& orig, sensor_msgs::CameraInfo camInfoC){
+    cv::Mat undistortColor(const cv::Mat& orig, sensor_msgs::CameraInfo camInfoC){
 
-        Mat retval;
-        Mat distcoeffs1         = distCoeffsFromCamInfo(camInfoC); 
-        Mat intrinsicK1         = kFromCamInfo(camInfoC);
+        cv::Mat retval;
+        cv::Mat distcoeffs1         = distCoeffsFromCamInfo(camInfoC); 
+        cv::Mat intrinsicK1         = kFromCamInfo(camInfoC);
 
         undistort(orig, retval, intrinsicK1, distcoeffs1);
         return retval;
 
     }//undistortColor
 
-    Point2f_vec getValidPoints(Mat imgCU, Mat depthMat){
+    Point2f_vec getValidPoints(cv::Mat imgCU, cv::Mat depthMat){
         //get our list of valid points
         Point2f_vec validPoints = Point2f_vec();
         for(int i = 4; i < imgCU.rows - 4; i++){//removing edges
@@ -147,7 +155,7 @@ using namespace cv::xfeatures2d;
 
     void putValidPointsIntoCameraSpace(const Point2f_vec validPoints, const Point2f_vec validPointsU,
                                         gvec3_vec& pointsCamspace, gvec3_vec& colorsCamspace,
-                                        const Mat imgCU, const Mat depthMat,
+                                        const cv::Mat imgCU, const cv::Mat depthMat,
                                         sensor_msgs::CameraInfo camInfoC
                                         ){
         double centerX  = camInfoC.K.at(2);
@@ -195,7 +203,7 @@ using namespace cv::xfeatures2d;
         return pointsWorldspace;
     }//cameraToWorldSpace
 
-    PointT_vec pointsFromRGBD(Mat imgC, Mat imgD,
+    PointT_vec pointsFromRGBD(cv::Mat imgC, cv::Mat imgD,
                         tf2::Transform xformC,//color
                         tf2::Transform xformD,//depth
                         tf2::Transform xformG,//global
@@ -207,26 +215,26 @@ using namespace cv::xfeatures2d;
         }//if
         ROS_INFO("===MATCHED IMAGES CALLBACK===");
 
-        Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
-        Mat dC  = distCoeffsFromCamInfo(camInfoC);
-        Mat kC  = kFromCamInfo(camInfoC);
-        Mat kD  = kFromCamInfo(camInfoD);
+        cv::Mat rbt = relativeRotateAndTranslateM(xformD, xformC);
+        cv::Mat dC  = distCoeffsFromCamInfo(camInfoC);
+        cv::Mat kC  = kFromCamInfo(camInfoC);
+        cv::Mat kD  = kFromCamInfo(camInfoD);
 
         //match our d image to our rgb image
-        Mat depthMat;
-        rgbd::registerDepth(kD, kC, dC, rbt, imgD, imgC.size(), depthMat);
+        cv::Mat depthMat;
+        cv::rgbd::registerDepth(kD, kC, dC, rbt, imgD, imgC.size(), depthMat);
 
         //Undistort our color and depth map images
-        Mat kCinv           = kC.inv();
-        Mat imgCU           = undistortColor(imgC, camInfoC);//color image undistorted
-        Mat imgDMU          = undistortColor(depthMat, camInfoC);//depth map undistorted
+        cv::Mat kCinv           = kC.inv();
+        cv::Mat imgCU           = undistortColor(imgC, camInfoC);//color image undistorted
+        cv::Mat imgDMU          = undistortColor(depthMat, camInfoC);//depth map undistorted
         
         //get our list of valid points
         Point2f_vec validPoints = getValidPoints(imgCU, depthMat);
 
         //undistort our points: want the projection to be for the most accurate camera projection
         Point2f_vec validPointsU;
-        undistortPoints(validPoints, validPointsU, kC, dC, noArray(), kC);
+        undistortPoints(validPoints, validPointsU, kC, dC, cv::noArray(), kC);
 
         //Get our camera-space points
         gvec3_vec pointsCamspace = gvec3_vec();  
@@ -261,7 +269,6 @@ using namespace cv::xfeatures2d;
         if (numMatches % ENDFRAMENUM == 0){
             pcl::io::savePCDFile("testOutput.pcd", pcloud);
             ROS_INFO("Successfully ran %d matches", numMatches);
-            ros::shutdown();
         }//if
         return retval;
     }//pointsFromRGBD
@@ -291,11 +298,11 @@ using namespace cv::xfeatures2d;
         sensor_msgs::CameraInfo ccaminfo = msg->rgb_camera_info;
         int dwidth = msg->depth_image.width;
         int dheight = msg->depth_image.height;
-        Mat dImage = Mat(dheight, dwidth, getEncodingTypeForCV(msg->depth_image.encoding), 
+        cv::Mat dImage = cv::Mat(dheight, dwidth, getEncodingTypeForCV(msg->depth_image.encoding), 
                          (void*) msg->depth_image.data.data(), msg->depth_image.step);
         int cwidth = msg->rgb_image.width;
         int cheight = msg->rgb_image.height;
-        Mat cImage = Mat(cheight, cwidth, getEncodingTypeForCV(msg->rgb_image.encoding), 
+        cv::Mat cImage = cv::Mat(cheight, cwidth, getEncodingTypeForCV(msg->rgb_image.encoding), 
                          (void*) msg->rgb_image.data.data(), msg->rgb_image.step);
         tf2::Transform xformD, xformC, xformG;
         tf2::fromMsg(msg->TIC_depth.transform, xformD);
@@ -333,15 +340,20 @@ using namespace cv::xfeatures2d;
 
         if (numMatches == 1){
             //move our retval to our point cloud
-            for(int i = 0; i < bunchOfPoints.size(); i++){
-                prevcloud.push_back(bunchOfPoints[i]);
-            }//for
-            prevxform = xformC * xformG;
+            setCloudPoints(prevcloud, bunchOfPoints);
+            prevxform = thisXform;
         }//if first frame
         else{
             //TODO: try some point cloud alignment
-            //alignClouds(prevcloud, bunchOfPoints);
-
+            PointT_cloud cloudIn = PointT_cloud();
+            setCloudPoints(cloudIn, bunchOfPoints);
+            tf2::Transform final_transform = tf2::Transform();
+            PointT_cloud cloudOut = PointT_cloud();
+            pairAlign(prevcloud, cloudIn,
+                      prevxform, thisXform,
+                      cloudOut,
+                      final_transform);
+            ros::shutdown();
         }//else, align some stuff
 
 
@@ -409,20 +421,104 @@ using namespace cv::xfeatures2d;
     }//main
 
     //########################################################
+    // Point Cloud alignment
+    //########################################################
+
+    ///Just a dumb little function renaming
+    void cloudwrite(const char filename[], const PointT_cloud cloud){
+        pcl::io::savePCDFile(filename, cloud);
+    }//outputCloud
+
+    Eigen::Matrix4f     transformFromTf2(tf2::Transform xform){
+        tf2::Stamped<tf2::Transform> xformstamped;
+        xformstamped.setData(xform);
+        geometry_msgs::TransformStamped intermediate = tf2::toMsg(xformstamped);
+        Eigen::Matrix4f retval = tf2::transformToEigen(intermediate).matrix().cast<float>();
+        return retval;
+    }//transformFromTf2
+
+
+    tf2::Transform      transformFromEigen(Eigen::Matrix4f xform){
+        Eigen::Affine3d xformAffine = Eigen::Affine3d(xform.cast<double>());
+        geometry_msgs::TransformStamped intermediate = tf2::eigenToTransform(xformAffine);
+        tf2::Transform retval;
+        tf2::fromMsg(intermediate.transform, retval);
+        return retval;
+    }//transformFromEigen
+
+    void pairAlign(const PointT_cloud& cloud_tgt,
+                   const PointT_cloud& cloud_src,
+                   tf2::Transform& tgtXform,
+                   tf2::Transform& srcXform,
+                   PointT_cloud& output,
+                   tf2::Transform& final_transform){
+        ROS_INFO("BEGINNING ALIGNMENT");
+
+        PointT_cloud combined = PointT_cloud();
+        #if DEBUGCLOUD
+        combined += cloud_src;
+        combined += cloud_tgt;
+        cloudwrite("cloud_src.pcd", cloud_src);
+        cloudwrite("cloud_tgt.pcd", cloud_tgt);
+        cloudwrite("cloud_comb_1.pcd", combined);
+        #endif
+
+        //make pointers of our clouds
+        PointT_cloud_ptr tgtptr = makeCloudPtr(cloud_tgt);
+        PointT_cloud_ptr srcptr = makeCloudPtr(cloud_src);
+        
+        
+        //Alignment
+        pcl::IterativeClosestPointNonLinear<PointT, PointT> reg;
+        reg.setTransformationEpsilon(1e-6);
+        reg.setMaxCorrespondenceDistance(0.1);
+        boost::shared_ptr<const pcl::DefaultPointRepresentation<PointT> > pointRepPtr;
+        pointRepPtr = boost::make_shared<const pcl::DefaultPointRepresentation<PointT> >(pcl::DefaultPointRepresentation<PointT>() );
+        reg.setPointRepresentation(pointRepPtr);
+
+        reg.setInputTarget(tgtptr);
+        reg.setInputSource(srcptr);
+
+        //run optimization
+        Eigen::Matrix4f Ti = Eigen::Matrix4f::Identity(), prev, targetToSource;
+        PointT_cloud_ptr reg_result = srcptr;
+        reg.setMaximumIterations(10);//???
+        reg.align(*reg_result);
+        Ti = reg.getFinalTransformation() * Ti;
+
+        targetToSource = Ti.inverse();
+
+
+        combined.resize(0);
+        combined += cloud_tgt;
+        combined += *reg_result;
+        #if DEBUGCLOUD
+        cloudwrite("cloud_comb_2.pcd", combined);
+        #endif
+
+        ROS_INFO("ENDING ALIGNMENT");
+
+    }
+
+
+
+
+    //########################################################
     // Old/unused functions (for archiving and maybe revival)
     //########################################################
 
-    void getKeyPointMatches(Mat img1, Mat img2, KeyPoint_vec *kp1, KeyPoint_vec *kp2, DMatch_vec *matches){
+    /*
+    void getKeyPointMatches(cv::Mat img1, cv::Mat img2, KeyPoint_vec *kp1, KeyPoint_vec *kp2, DMatch_vec *matches){
         //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
         int minHessian = 700;
-        Ptr<SURF> detector = SURF::create( minHessian );
+        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create( minHessian );
         KeyPoint_vec keypoints1, keypoints2;
-        Mat descriptors1, descriptors2;
-        detector->detectAndCompute( img1, noArray(), keypoints1, descriptors1 );
-        detector->detectAndCompute( img2, noArray(), keypoints2, descriptors2 );
+        cv::Mat descriptors1, descriptors2;
+        detector->detectAndCompute( img1, cv::noArray(), keypoints1, descriptors1 );
+        detector->detectAndCompute( img2, cv::noArray(), keypoints2, descriptors2 );
         //-- Step 2: Matching descriptor vectors with a FLANN based matcher
         // Since SURF is a floating-point descriptor NORM_L2 is used
-        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+        cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
         std::vector< DMatch_vec > knn_matches;
         matcher->knnMatch( descriptors1, descriptors2, knn_matches, 2 );
         //-- Filter matches using the Lowe's ratio test
@@ -459,13 +555,13 @@ using namespace cv::xfeatures2d;
     }//coordsFromMatches
 
     /**
-    First Mat is a 3x3 rotation, second is a 3x1 translation
-    */
-    void rotAndTransFromXform(tf2::Transform xform1, Mat &rot, Mat &trans){
+    First cv::Mat is a 3x3 rotation, second is a 3x1 translation
+    //
+    void rotAndTransFromXform(tf2::Transform xform1, cv::Mat &rot, cv::Mat &trans){
         double raw[15];
         xform1.getOpenGLMatrix(raw);
-        Mat translation     = Mat(3, 1, CV_64F, raw + 12);
-        Mat rotation        = Mat(3, 4, CV_64F, raw);
+        cv::Mat translation     = cv::Mat(3, 1, CV_64F, raw + 12);
+        cv::Mat rotation        = cv::Mat(3, 4, CV_64F, raw);
         rotation            = rotation.colRange(0, 3);
 
         for (int i = 0; i < 3; i++){
@@ -482,10 +578,10 @@ using namespace cv::xfeatures2d;
     /**
     Could definitely be moved into CUDA (look at that sweet, sweet parallelism)
     But... we're not using the fisheye camera
-    */
-    Mat undistortFishEye(const Mat &distorted, const float w)
+    //
+    cv::Mat undistortFishEye(const cv::Mat &distorted, const float w)
     {
-        Mat map_x, map_y;
+        cv::Mat map_x, map_y;
         map_x.create(distorted.size(), CV_32FC1);
         map_y.create(distorted.size(), CV_32FC1);
 
@@ -503,7 +599,8 @@ using namespace cv::xfeatures2d;
             }
         }
 
-        Mat undistorted;
-        remap(distorted, undistorted, map_x, map_y, INTER_LINEAR);
+        cv::Mat undistorted;
+        remap(distorted, undistorted, map_x, map_y, cv::INTER_LINEAR);
         return undistorted;
     }
+    */
