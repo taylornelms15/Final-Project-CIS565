@@ -12,6 +12,7 @@
 #include <pcl/common/projection_matrix.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/registration/icp_nl.h>
+#include <pcl/filters/approximate_voxel_grid.h>
 #include <pcl_ros/point_cloud.h>
 #include <tf2_eigen/tf2_eigen.h>
 
@@ -38,24 +39,24 @@
 
 
     ///Convenience function to convert our transformation matrices
-    Eigen::Matrix4f     transformFromTf2(tf2::Transform xform);
+    Eigen::Matrix4f     transformFromTf2(const tf2::Transform xform);
     ///Convenience function to convert our transformation matrices
-    tf2::Transform      transformFromEigen(Eigen::Matrix4f xform);
+    tf2::Transform      transformFromEigen(const Eigen::Matrix4f xform);
 
     /**
     @param cloud_src        The first-guess transformed src cloud
-    @param cloud_tgt        The first-guess transformed dst cloud
+    @param cloud_tgt        The first-guess transformed tgt cloud
     @param srcXform         The given world xform for the src cloud (already applied)
-    @param dstXform         The given world xform for the dst cloud (already applied)
+    @param dstXform         The given world xform for the tgt cloud (already applied)
     @param output           Output variable: a representation of both stacked together (?)
     @param final_transform  Output variable: the actual transformation to get dst onto src (?)
+
+    @return                 Estimated transformation to put the src cloud onto the tgt cloud
     */
-    void pairAlign(const PointT_cloud& cloud_src,
-                   const PointT_cloud& cloud_tgt,
-                   tf2::Transform& srcXform,
-                   tf2::Transform& dstXform,
-                   PointT_cloud& output,
-                   tf2::Transform& final_transform);
+    tf2::Transform pairAlign(const PointT_cloud& cloud_tgt,
+                   const PointT_cloud& cloud_src,
+                   tf2::Transform& tgtXform,
+                   tf2::Transform& srcXform);
 
 
 

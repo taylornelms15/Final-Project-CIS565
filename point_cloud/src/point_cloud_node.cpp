@@ -14,6 +14,11 @@
 #define ENDFRAMENUM 2
 #define SKIPFRAMES  1
 
+#define ALIGNMENT_ITERATIONS 10
+#define ALIGNMENT_EPSILON 1e-6
+#define ALIGNMENT_DISTMAX 0.1
+#define ALIGNMENT_FILTER_SCALE 0.035
+
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
 #define SCALING (100.0/65535.0)//1/256 also seemed close, so we could be way off the mark
 //#define SCALING (1000.0 / 65535)
@@ -203,12 +208,42 @@
         return pointsWorldspace;
     }//cameraToWorldSpace
 
+    /**
+    //TODO: put the classification info in here
+    @param validPoints      Vector of cv::Point2f points that describe the locations on the image we're projecting into space
+    @param imgC             The cv::Mat representing the input color image
+    @param colorsCamspace   The colors from the image for each point (same size as validPoints; already sampled)
+    @param pointsWorldspace The points' coordinates in world space (same size as validPoints)
+    @param classification   ??????
+    @param factor           Color-scaling factor (was useful for debugging temporal information)
+
+    @return                 Vector of PointT objects representing the points' positions, colors, and classification labels
+    */
+    PointT_vec createPcloudPoints(Point2f_vec validPoints, cv::Mat imgC,
+                                  gvec3_vec colorsCamspace, gvec3_vec pointsWorldspace,
+                                  vision_msgs::Detection2DArray classification,
+                                  gvec3 factor = gvec3(1.0f, 1.0f, 1.0f)){
+        PointT_vec retval = PointT_vec();
+        for (int i = 0; i < colorsCamspace.size(); i++){
+            gvec3 color = colorsCamspace.at(i) * factor;
+            gvec3 pos   = pointsWorldspace.at(i);
+            //TODO: put the right classification index into the back end of this constructor
+            PointT nextPoint = PointT(color.r, color.g, color.b, 0);
+            nextPoint.x = pos.x; nextPoint.y = pos.y; nextPoint.z = pos.z;
+            //pcloud.push_back(nextPoint);//this would put the new points into the global point cloud
+            retval.push_back(nextPoint);
+        }//for
+
+        return retval;
+    }
+
     PointT_vec pointsFromRGBD(cv::Mat imgC, cv::Mat imgD,
                         tf2::Transform xformC,//color
                         tf2::Transform xformD,//depth
                         tf2::Transform xformG,//global
                         sensor_msgs::CameraInfo camInfoC,
-                        sensor_msgs::CameraInfo camInfoD
+                        sensor_msgs::CameraInfo camInfoD,
+                        vision_msgs::Detection2DArray classification
                         ){
         if (numMatches % SKIPFRAMES != 0){
             return PointT_vec();
@@ -254,16 +289,11 @@
             factor *= factorF;
         }//for
 
-        //Next step: push into our global point cloud
-        PointT_vec retval = PointT_vec();
-        for (int i = 0; i < colorsCamspace.size(); i++){
-            gvec3 color = colorsCamspace.at(i) * factor;
-            gvec3 pos   = pointsWorldspace.at(i);
-            PointT nextPoint = PointT(color.r, color.g, color.b, 0);
-            nextPoint.x = pos.x; nextPoint.y = pos.y; nextPoint.z = pos.z;
-            pcloud.push_back(nextPoint);
-            retval.push_back(nextPoint);
-        }//for
+        //TODO: consider classification stuff here
+        PointT_vec retval = createPcloudPoints(validPoints, imgC,
+                                               colorsCamspace, pointsWorldspace,
+                                               classification,
+                                               factor);
 
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
@@ -336,7 +366,8 @@
         //Pass messages on to our point-cloud-making machine
         PointT_vec bunchOfPoints = pointsFromRGBD(cImage, dImage,
             xformC, xformD, xformG,
-            ccaminfo, dcaminfo);
+            ccaminfo, dcaminfo,
+            msg->classification);
 
         if (numMatches == 1){
             //move our retval to our point cloud
@@ -347,12 +378,8 @@
             //TODO: try some point cloud alignment
             PointT_cloud cloudIn = PointT_cloud();
             setCloudPoints(cloudIn, bunchOfPoints);
-            tf2::Transform final_transform = tf2::Transform();
-            PointT_cloud cloudOut = PointT_cloud();
-            pairAlign(prevcloud, cloudIn,
-                      prevxform, thisXform,
-                      cloudOut,
-                      final_transform);
+            tf2::Transform requiredXform  = pairAlign(prevcloud, cloudIn,
+                                                      prevxform, thisXform);
             ros::shutdown();
         }//else, align some stuff
 
@@ -424,12 +451,27 @@
     // Point Cloud alignment
     //########################################################
 
+    /**
+    Filter an incoming cloud down for alignment
+    */
+    PointT_cloud filterVoxel(const PointT_cloud cloud){
+        PointT_cloud_ptr cloud_ptr = makeCloudPtr(cloud);
+        pcl::ApproximateVoxelGrid<PointT> sor;
+        sor.setInputCloud(cloud_ptr);
+        sor.setLeafSize(ALIGNMENT_FILTER_SCALE, ALIGNMENT_FILTER_SCALE, ALIGNMENT_FILTER_SCALE);
+        PointT_cloud retval = PointT_cloud();
+        sor.filter(retval);
+        ROS_INFO("Beginning points: %zu\tEnding points:%zu", cloud.size(), retval.size());
+        return retval;
+
+    }//filterVoxel
+
     ///Just a dumb little function renaming
     void cloudwrite(const char filename[], const PointT_cloud cloud){
         pcl::io::savePCDFile(filename, cloud);
     }//outputCloud
 
-    Eigen::Matrix4f     transformFromTf2(tf2::Transform xform){
+    Eigen::Matrix4f     transformFromTf2(const tf2::Transform xform){
         tf2::Stamped<tf2::Transform> xformstamped;
         xformstamped.setData(xform);
         geometry_msgs::TransformStamped intermediate = tf2::toMsg(xformstamped);
@@ -438,7 +480,7 @@
     }//transformFromTf2
 
 
-    tf2::Transform      transformFromEigen(Eigen::Matrix4f xform){
+    tf2::Transform      transformFromEigen(const Eigen::Matrix4f xform){
         Eigen::Affine3d xformAffine = Eigen::Affine3d(xform.cast<double>());
         geometry_msgs::TransformStamped intermediate = tf2::eigenToTransform(xformAffine);
         tf2::Transform retval;
@@ -446,32 +488,37 @@
         return retval;
     }//transformFromEigen
 
-    void pairAlign(const PointT_cloud& cloud_tgt,
+    tf2::Transform pairAlign(const PointT_cloud& cloud_tgt,
                    const PointT_cloud& cloud_src,
                    tf2::Transform& tgtXform,
-                   tf2::Transform& srcXform,
-                   PointT_cloud& output,
-                   tf2::Transform& final_transform){
-        ROS_INFO("BEGINNING ALIGNMENT");
+                   tf2::Transform& srcXform){
+        ROS_INFO("BEGINNING ALIGNMENT");//TODO: allow for down-filtering to speed up computation
+
+        tf2::Transform estimatedT = relativeRotateAndTranslateT(srcXform, tgtXform);
+        Eigen::Matrix4f estimated = transformFromTf2(estimatedT);
+
+        //filter input clouds
+        PointT_cloud cloud_tgt1 = filterVoxel(cloud_tgt);
+        PointT_cloud cloud_src1 = filterVoxel(cloud_src);
 
         PointT_cloud combined = PointT_cloud();
         #if DEBUGCLOUD
-        combined += cloud_src;
-        combined += cloud_tgt;
-        cloudwrite("cloud_src.pcd", cloud_src);
-        cloudwrite("cloud_tgt.pcd", cloud_tgt);
+        combined += cloud_src1;
+        combined += cloud_tgt1;
+        cloudwrite("cloud_src.pcd", cloud_src1);
+        cloudwrite("cloud_tgt.pcd", cloud_tgt1);
         cloudwrite("cloud_comb_1.pcd", combined);
         #endif
 
         //make pointers of our clouds
-        PointT_cloud_ptr tgtptr = makeCloudPtr(cloud_tgt);
-        PointT_cloud_ptr srcptr = makeCloudPtr(cloud_src);
+        PointT_cloud_ptr tgtptr = makeCloudPtr(cloud_tgt1);
+        PointT_cloud_ptr srcptr = makeCloudPtr(cloud_src1);
         
         
         //Alignment
         pcl::IterativeClosestPointNonLinear<PointT, PointT> reg;
-        reg.setTransformationEpsilon(1e-6);
-        reg.setMaxCorrespondenceDistance(0.1);
+        reg.setTransformationEpsilon(ALIGNMENT_EPSILON);
+        reg.setMaxCorrespondenceDistance(ALIGNMENT_DISTMAX);
         boost::shared_ptr<const pcl::DefaultPointRepresentation<PointT> > pointRepPtr;
         pointRepPtr = boost::make_shared<const pcl::DefaultPointRepresentation<PointT> >(pcl::DefaultPointRepresentation<PointT>() );
         reg.setPointRepresentation(pointRepPtr);
@@ -479,24 +526,25 @@
         reg.setInputTarget(tgtptr);
         reg.setInputSource(srcptr);
 
+        //give initial xform estimate (already doing this)
+
         //run optimization
-        Eigen::Matrix4f Ti = Eigen::Matrix4f::Identity(), prev, targetToSource;
+        Eigen::Matrix4f Ti;
         PointT_cloud_ptr reg_result = srcptr;
-        reg.setMaximumIterations(10);//???
+        reg.setMaximumIterations(ALIGNMENT_ITERATIONS);//???
         reg.align(*reg_result);
-        Ti = reg.getFinalTransformation() * Ti;
-
-        targetToSource = Ti.inverse();
-
+        Ti = reg.getFinalTransformation();
+        tf2::Transform retval = transformFromEigen(Ti); 
 
         combined.resize(0);
-        combined += cloud_tgt;
+        combined += cloud_tgt1;
         combined += *reg_result;
         #if DEBUGCLOUD
         cloudwrite("cloud_comb_2.pcd", combined);
         #endif
 
         ROS_INFO("ENDING ALIGNMENT");
+        return retval;
 
     }
 
@@ -507,100 +555,3 @@
     // Old/unused functions (for archiving and maybe revival)
     //########################################################
 
-    /*
-    void getKeyPointMatches(cv::Mat img1, cv::Mat img2, KeyPoint_vec *kp1, KeyPoint_vec *kp2, DMatch_vec *matches){
-        //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
-        int minHessian = 700;
-        cv::Ptr<cv::xfeatures2d::SURF> detector = cv::xfeatures2d::SURF::create( minHessian );
-        KeyPoint_vec keypoints1, keypoints2;
-        cv::Mat descriptors1, descriptors2;
-        detector->detectAndCompute( img1, cv::noArray(), keypoints1, descriptors1 );
-        detector->detectAndCompute( img2, cv::noArray(), keypoints2, descriptors2 );
-        //-- Step 2: Matching descriptor vectors with a FLANN based matcher
-        // Since SURF is a floating-point descriptor NORM_L2 is used
-        cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
-        std::vector< DMatch_vec > knn_matches;
-        matcher->knnMatch( descriptors1, descriptors2, knn_matches, 2 );
-        //-- Filter matches using the Lowe's ratio test
-        const float ratio_thresh = 0.7f;
-        DMatch_vec good_matches;
-        for (size_t i = 0; i < knn_matches.size(); i++)
-        {
-            if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
-            {
-                good_matches.push_back(knn_matches[i][0]);
-            }
-        }
-        *kp1 = KeyPoint_vec(keypoints1);
-        *kp2 = KeyPoint_vec(keypoints2);
-        *matches = DMatch_vec(good_matches);
-    }
-
-    std::vector<Point2f_vec > coordsFromMatches(KeyPoint_vec keypoints1,
-                                                         KeyPoint_vec keypoints2,
-                                                         DMatch_vec good_matches){
-        Point2f_vec points1 = Point2f_vec();
-        Point2f_vec points2 = Point2f_vec();
-        for(int i = 0; i < good_matches.size(); i++){
-            DMatch match = good_matches.at(i);
-            points1.push_back(keypoints1[match.trainIdx].pt);
-            points2.push_back(keypoints2[match.trainIdx].pt);
-        }//for
-
-        std::vector<Point2f_vec > retval = std::vector<Point2f_vec >();
-        retval.push_back(points1);
-        retval.push_back(points2);
-        return retval;
-        
-    }//coordsFromMatches
-
-    /**
-    First cv::Mat is a 3x3 rotation, second is a 3x1 translation
-    //
-    void rotAndTransFromXform(tf2::Transform xform1, cv::Mat &rot, cv::Mat &trans){
-        double raw[15];
-        xform1.getOpenGLMatrix(raw);
-        cv::Mat translation     = cv::Mat(3, 1, CV_64F, raw + 12);
-        cv::Mat rotation        = cv::Mat(3, 4, CV_64F, raw);
-        rotation            = rotation.colRange(0, 3);
-
-        for (int i = 0; i < 3; i++){
-            for(int j = 0; j < 3; j++){
-                rot.at<double>(i, j) = rotation.at<double>(i, j);
-            }//for
-        }//for
-        for(int i = 0; i < 3; i++){
-            trans.at<double>(i, 1) = translation.at<double>(i, 1);
-        }//for
-    
-    }//rotAndTransFromXform
-
-    /**
-    Could definitely be moved into CUDA (look at that sweet, sweet parallelism)
-    But... we're not using the fisheye camera
-    //
-    cv::Mat undistortFishEye(const cv::Mat &distorted, const float w)
-    {
-        cv::Mat map_x, map_y;
-        map_x.create(distorted.size(), CV_32FC1);
-        map_y.create(distorted.size(), CV_32FC1);
-
-        double Cx = distorted.cols / 2.0;
-        double Cy = distorted.rows / 2.0;
-
-        double halfTan = tan(w / 2.0);
-        for (double x = -1.0; x < 1.0; x += 1.0/Cx) {
-            for (double y = -1.0; y < 1.0; y += 1.0/Cy) {
-                double ru = sqrt(x*x + y*y);
-                double rd = (1.0 / w)*atan(2.0*ru*halfTan);
-
-                map_x.at<float>(y*Cy + Cy, x*Cx + Cx) = rd/ru * x*Cx + Cx;
-                map_y.at<float>(y*Cy + Cy, x*Cx + Cx) = rd/ru * y*Cy + Cy;
-            }
-        }
-
-        cv::Mat undistorted;
-        remap(distorted, undistorted, map_x, map_y, cv::INTER_LINEAR);
-        return undistorted;
-    }
-    */
