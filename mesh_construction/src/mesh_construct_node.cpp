@@ -513,12 +513,12 @@ void PointCloudToMesh(
 	mls.setInputCloud(cloud);
 	mls.setPolynomialOrder(2);
 	mls.setSearchMethod(tree);
-	mls.setSearchRadius(0.05);
+	mls.setSearchRadius(0.2);
 	mls.setPolynomialFit(false); // Too much computational power needed.
 	//mls.setUpsamplingMethod(pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal>::RANDOM_UNIFORM_DENSITY);
 	//mls.setPointDensity(1);
 	mls.process(*cloud_with_normals);
-	std::cout << "After MLS: " << temp_cloud->points.size() << std::endl;
+	std::cout << "After MLS: " << cloud_with_normals->points.size() << std::endl;
 	
 	// Now remove any NaN normals. This will also remove the points themselves.
 	pcl::removeNaNNormalsFromPointCloud(*cloud_with_normals, *cloud_with_normals, throw_away);
@@ -529,7 +529,7 @@ void PointCloudToMesh(
 	gp3.setSearchRadius(0.05);
 	gp3.setMu(3.0);
 	gp3.setMaximumNearestNeighbors(100);
-	gp3.setMaximumSurfaceAngle(M_PI/4);   // 45 degrees
+	gp3.setMaximumSurfaceAngle(M_PI/3);   // 60 degrees
 	gp3.setMinimumAngle(M_PI/18);         // 10 degrees
 	gp3.setMaximumAngle(2*M_PI/3);        // 120 degrees
 	gp3.setNormalConsistency(true);
@@ -537,10 +537,10 @@ void PointCloudToMesh(
 	gp3.setInputCloud(cloud_with_normals);
 	tree2->setInputCloud(cloud_with_normals);
 	gp3.setSearchMethod(tree2);
-	std::cout << "GP3 End" << std::endl;
 
 	// Construct Mesh
 	gp3.reconstruct(mesh);
+	std::cout << "GP3 End" << std::endl;
 	
 	// Get min/max, needed for gltf
 	pcl::getMinMax3D(*cloud_with_normals, min, max);
@@ -552,7 +552,7 @@ void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 	// Reduce points based on features
 	std::cout << "US before: " << cloud->points.size() << std::endl;
 	pcl::UniformSampling<pcl::PointXYZRGB> us;
-	us.setRadiusSearch(0.01f); // Experiment or set to 1/1000 of min/max
+	us.setRadiusSearch(0.02f); // Experiment or set to 1/1000 of min/max
 	us.setInputCloud(cloud);
 	us.filter(*cloud);
 	std::cout << "US after: " << cloud->points.size() << std::endl;
@@ -562,7 +562,7 @@ void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 	std::cout << "ROR before: " << cloud->points.size() << std::endl;
 	pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> ror;
 	ror.setRadiusSearch(0.05f);
-	ror.setMinNeighborsInRadius(20);
+	ror.setMinNeighborsInRadius(15);
 	ror.setInputCloud(cloud);
 	ror.filter(*cloud);
 	std::cout << "ROR after: " << cloud->points.size() << std::endl;
@@ -608,18 +608,18 @@ int main(int argc, char **argv)
 	* 
 	*/  
 	// Data from rosbag used for testing
-	ros::Subscriber sub3 = n.subscribe("/point_cloud_G", 1000, PointCloud2Callback);
+	ros::Subscriber sub3 = n.subscribe("/dronemom_pointcloud", 1000, PointCloud2Callback);
 	
 	// Subscribe to the map of detection IDS.
 	ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
 
 	ROS_INFO("point cloud, waiting for messages");
 	
-#if 0	// PCD Load for Testing
+#if 1	// PCD Load for Testing
 	// Load input file into a PointCloud<T> with an appropriate type
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::PCLPointCloud2 cloud_blob;
-	pcl::io::loadPCDFile("singleFrame.pcd", cloud_blob);
+	pcl::io::loadPCDFile("./src/Final-Project-CIS565/images/96output.pcd", cloud_blob);
 	pcl::fromPCLPointCloud2(cloud_blob, *cloud);
 
 	ROS_INFO("generating output!!");
@@ -634,13 +634,13 @@ int main(int argc, char **argv)
 	PointCloudToMesh(cloud, mesh, min, max);
 	
 	ROS_INFO("Writing to output file...");
-	WriteMeshToGLTF(mesh, min, max);
+	WriteMeshToGLTF("testlabel", mesh, min, max);
 	
 	ROS_INFO("Preview!");
 	pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
 	viewer->setBackgroundColor(0, 0, 0);
 	viewer->addPolygonMesh(mesh, "mesh"); 
-	viewer->addCoordinateSystem (1.0);
+	//viewer->addCoordinateSystem (1.0);
 	viewer->initCameraParameters ();
 	
 	while (!viewer->wasStopped ())
