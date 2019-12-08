@@ -4,31 +4,31 @@
 #define DEBUGOUT 1
 
 #define DEBUGCAMINFO (DEBUGOUT && 0)
-#define DEBUGIMAGE (DEBUGOUT && 1)
+#define DEBUGIMAGE (DEBUGOUT && 0)
 #define DEBUGXFORM (DEBUGOUT && 0)
 #define DEBUGCLOUD (DEBUGOUT && 1)
 
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM     64
+#define ENDFRAMENUM     96
 #define SKIPFRAMES      1
 #define SYNCFRAMES      8
 
-#define ALIGNMENT_ITERATIONS 12
+#define ALIGNMENT_ITERATIONS 18
 #define ALIGNMENT_EPSILON 1e-6
-#define ALIGNMENT_DISTMAX 0.1
-#define ALIGNMENT_FILTER_SCALE 0.04
+#define ALIGNMENT_DISTMAX 0.07
+#define ALIGNMENT_FILTER_SCALE 0.038
 
-//This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
-#define SCALING (100.0/65535.0)//1/256 also seemed close, so we could be way off the mark
-//#define SCALING (1000.0 / 65535)
+//This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m...maybe
+#define SCALING (100.0/65535.0)//this should definitely stay here now, other scaling factors are based off it
 
 //using namespace cv;
 //using namespace cv::xfeatures2d;
 
 
     const static char dronemomSubPath[] = "detectnet/detections";
+    //other paths unused
     const static char imageSubPath[]    = "camera/rgb/image_raw";
     const static char camInfoSubPath[]  = "camera/rgb/camera_info";
     const static char dimageSubPath[]   = "camera/depth/image_raw";
@@ -287,7 +287,8 @@
         //gvec3_vec pointsWorldspace = pointsCamspace;
 
         //create color factor (for debugging)
-        gvec3 factorF = gvec3(1.0, 0.97, 0.97); gvec3 factor = gvec3(1.0, 1.0, 1.0);
+        //gvec3 factorF = gvec3(1.0, 0.97, 0.97); gvec3 factor = gvec3(1.0, 1.0, 1.0);
+        gvec3 factorF = gvec3(1.0, 1.0, 1.0); gvec3 factor = gvec3(1.0, 1.0, 1.0);
         for(int i = 0; i < numMatches; i++){
             factor *= factorF;
         }//for
@@ -414,21 +415,17 @@
         tf2::fromMsg(msg->TIC_color.transform, xformC);
         tf2::fromMsg(msg->TGI.transform, xformG);
         
+        //these lines helped make a "video" to track how things actually moved
         //char filenameC[100]; std::sprintf(filenameC, "color_image%d.png", numMatches);
         //imwrite(filenameC, cImage);
 
-        ROS_INFO("===DRONEMOM MESSAGE==");
-
         tf2::Transform thisXform = xformC * xformG;
 
-        //make our direction offset point for the "WTF" questions
-        makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
-        makeDirectionOffsetPoint(thisXform, .01, 0, 0, 255, 0, 0);
-        makeDirectionOffsetPoint(thisXform, 0, .01, 0, 0, 255, 0);
-        makeDirectionOffsetPoint(thisXform, 0, 0, .01, 0, 0, 255);
-        //makeDirectionOffsetPoint(thisXform, 0, .01, 0, 255, 0, 0);
-        //makeDirectionOffsetPoint(thisXform, 0, 0, -.01, 0, 255, 0);
-        //makeDirectionOffsetPoint(thisXform, -.01, 0, 0, 0, 0, 255);
+        //make our direction offset point to track "camera path"
+        //makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
+        //makeDirectionOffsetPoint(thisXform, .01, 0, 0, 255, 0, 0);
+        //makeDirectionOffsetPoint(thisXform, 0, .01, 0, 0, 255, 0);
+        //makeDirectionOffsetPoint(thisXform, 0, 0, .01, 0, 0, 255);
 
 
         //Pass messages on to our point-cloud-making machine
@@ -511,6 +508,7 @@
         ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 1000, DetectionCallback);
 
         //small function to verify our link to CUDA
+        //This will almost certainly remain unused and useless
         float array1[32];
         float array2[32];
         for (int i = 0; i < 32; i++){
@@ -550,7 +548,7 @@
         PointT_cloud retval = PointT_cloud();
         sor.filter(retval);
         #if DEBUGCLOUD
-        ROS_INFO("Scale %f\tBeginning points: %zu Ending points:%zu", filterscale, cloud.size(), retval.size());
+        //ROS_INFO("Scale %f\tBeginning points: %zu Ending points:%zu", filterscale, cloud.size(), retval.size());
         #endif
         return retval;
 
@@ -563,7 +561,7 @@
         PointT_cloud retval = PointT_cloud();
         sor.filter(retval);
         #if DEBUGCLOUD
-        ROS_INFO("Meank %d\tBeginning points: %zu Ending points:%zu", sor.getMeanK(), cloud.size(), retval.size());
+        //ROS_INFO("Meank %d\tBeginning points: %zu Ending points:%zu", sor.getMeanK(), cloud.size(), retval.size());
         #endif
         return retval;
 
@@ -603,7 +601,7 @@
                    tf2::Transform& tgtXform,
                    tf2::Transform& srcXform){
         #if DEBUGCLOUD
-        ROS_INFO("BEGINNING ALIGNMENT");
+        //ROS_INFO("BEGINNING ALIGNMENT");
         #endif
         ros::Time begin = ros::Time::now();
 
@@ -616,11 +614,11 @@
 
         PointT_cloud combined = PointT_cloud();
         #if DEBUGCLOUD
-        combined += cloud_src1;
-        combined += cloud_tgt1;
+        //combined += cloud_src1;
+        //combined += cloud_tgt1;
         //cloudwrite("cloud_src.pcd", cloud_src1);
         //cloudwrite("cloud_tgt.pcd", cloud_tgt1);
-        cloudwrite("cloud_comb_1.pcd", combined);
+        //cloudwrite("cloud_comb_1.pcd", combined);
         #endif
 
         //make pointers of our clouds
@@ -653,14 +651,14 @@
         combined += cloud_tgt1;
         combined += *reg_result;
         #if DEBUGCLOUD
-        cloudwrite("cloud_comb_2.pcd", combined);
+        //cloudwrite("cloud_comb_2.pcd", combined);
         #endif
 
         ros::Time end = ros::Time::now();
         #if DEBUGCLOUD
         ros::Duration diffTime = end - begin;
         double diffSecs = diffTime.toSec();
-        ROS_INFO("\tALIGNMENT FROM %zu\tTO %zu\tPOINTS TOOK %f\tSECONDS", cloud_src1.size(), cloud_tgt1.size(), diffSecs);
+        ROS_INFO("\tALIGNMENT FROM %zu TO %zu POINTS TOOK %.3f SECONDS", cloud_src1.size(), cloud_tgt1.size(), diffSecs);
         #endif
         return retval;
 
