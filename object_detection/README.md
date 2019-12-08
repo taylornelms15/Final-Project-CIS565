@@ -4,6 +4,8 @@
 
 ![](../images/detect.gif)
 
+
+
 TensorRT is used to acclerate inference on the GPU. To use TensorRT one must first build the engine. This can be done in may ways using a UFF, Caffe Model or ONNX file. Because ONNX is so new and rapidly evolving I had a huge amount of version issues when attmepting to build a network from ONNX file. 
 
 The easiest and least painful way is to freeze a tensorflow graph and then use nvidias uff converter to converter your tensorflow pb file to a uff file. If you can do this succesfully one huge hurdle is out of the way... Seriously it is painful...
