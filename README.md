@@ -8,30 +8,31 @@
 - [Results](#Results)
 - [Build Instructions](#Build-Instructions)
 
-
 ## Problem Statement
 
-Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can automate this?
+Collecting 3D object datasets involves a large amount of manual work and is time consuming. We have built a system that is capable of converting recorded video and depth camera data to generate 3D models on a Nvidia Jetson Nano.
 
-## Repo Structure
+(Stitched Picture Here!)
 
-This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
+## Project Overview
 
-## Project Overview (add pictures)
+ROS (Robot Operating System) is heavily used in research. We utilize ROS as a message passing backbone. Our ROS system consists of a central ROS Core and several ROS Nodes that may subscribe and publish messages. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. Our system contains three ROS Nodes we developed: an Object Detection node, a Point Cloud Node, and a Mesh Construction Node. These three nodes combine to form a pipeline that accepts a ROS bag containing video frames and depth sensor data and outputs a GLTF mesh of classified objects. 
 
-ROS is heavily used in research. ROS is a message passing backbone for use in Drone and other robotic applications. ROS systems consist of a central ROS Core and several ROS Nodes that may subscribe and publish messages. ROS also contains support for various robotics libraries. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
-
-
+The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
 ## Design
 
 ![](images/dronemom_pipeline.png)
 
-The first step in our pipeline is to classify the important objects in a scene. This is done for two reasons. Reason 1 is that we need to be able to give a description of what objects are in a scene. The second reason is that we can give bounding boxes to the point cloud on where to focus in on. Point cloud computation is expensive so this is one way of optimizing. We only generate a point cloud in regions captured by the bouding boxes, reducing the calculations needed. After the point cloud is generated we pass it to a mesh construction node. The mesh construction node further filters and smooths the data to reduce noise from collection sensors. The cloud is then turned into a PCL PolygonMesh using a Greedy Triangulation Algorithm (Marton, et. al.). The data is finally converted into a GLTF file with accompanying binary data. The GLTF output may then be loaded on any GLTF viewer by the end user.
+The first step in our pipeline is to classify the important objects in a scene. We only generate a point cloud in regions captured by the bouding boxes, reducing the calculations needed.  After classification, the image data and bounding boxes are sent to a point cloud node for generation and labeling. After the point cloud is generated we pass it to a mesh construction node. The mesh construction node further filters and smooths the data to reduce noise from collection sensors. The cloud is then turned into a PCL PolygonMesh using a Greedy Triangulation Algorithm (Marton, et. al.). The data is finally converted into a GLTF file with accompanying binary data. The GLTF output may then be loaded on any GLTF viewer by the end user.
 
 ## Results
 
-Further information and alysis can be found in the actual folder of the ROS node. Because we are utilizing ROS each subcomponent has its own readme. This is because users usign ROS can drag and drop nodes
+Further information and analysis can be found in the actual folder of the ROS node. Because we are utilizing ROS each subcomponent has its own README.
+
+## Repo Structure
+
+This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
 ## Performance Analysis
 
@@ -39,6 +40,9 @@ Data was collected of running inference on the CPU and GPU FP16 is an optimzatio
 
 ![](images/trt_graph.png)
 
+## Future Work
+
+# Appendix
 
 ## Build Instructions
 
@@ -164,15 +168,13 @@ Now you can clone this repo into the src folder of your newly crated ROS workspa
 
 ### Build 
 
-navigate to your workspace so `~/CIS565/droneMoM_ws`
-
-and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
+Navigate to your workspace so `~/CIS565/droneMoM_ws` and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
 
 That is it! Now you have ROS running and can make your ROS nodes.
 
 ### Test 
 
-open 4 terminals.
+Open 4 terminals.
 
 This is our roscore terminal it is like a master node ROS can only run with roscore
 
@@ -181,7 +183,7 @@ source devel/setup.bash
 roscore
 ```
 
-run this last
+Run this last
 
 ```bash
 source devel/setup.bash
@@ -231,18 +233,18 @@ To see what topics to subscribe to or what is in the bag type in.
 rosbag info <your bag>
 ```
 
+# Libraries
+
+* [ROS](https://www.ros.org/)
+* [PCL](http://pointclouds.org/)
+* [OpenCV](https://opencv.org/)
+* [TensorRT](https://developer.nvidia.com/tensorrt)
+* [CMake](https://cmake.org/)
+
 # References
 
-* [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
-  * Huge dump of drone data for processing
-* [The UZH-FPV Drone Racing Dataset](http://rpg.ifi.uzh.ch/uzh-fpv.html)
-  * Another drone data dump; this one focuses on high-speed drone operation in particular
-* [EuRoc MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
-  * More Drone footage datasets
-* [Github Link with lists of further datasets](https://github.com/youngguncho/awesome-slam-datasets#unmanned-aerial-vehicle)
-* [Equation for Ray Closest Intersections](http://morroworks.palitri.com/Content/Docs/Rays%20closest%20point.pdf)
-* [Trifocal Tensor Code](https://github.com/cchampet/TrifocalTensor)
-* [Marton, et al. "On Fast Surface Reconstruction Methods for Large and Noisy Datasets"](chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://ias.informatik.tu-muenchen.de/_media/spezial/bib/marton09icra.pdf)
+* [Incremental Object Database: Building 3D Models from Multiple Partial Observations](https://projects.asl.ethz.ch/datasets/doku.php?id=iros2018incrementalobjectdatabase)
+* [On Fast Surface Reconstruction Methods for Large and Noisy Datasets](https://ias.informatik.tu-muenchen.de/_media/spezial/bib/marton09icra.pdf)
 
 
 # Credits 
