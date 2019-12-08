@@ -11,13 +11,13 @@
 
 ## Problem Statement
 
-Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can create 3D models in real time?
+Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can automate this?
 
 ## Repo Structure
 
 This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
-## Project Overview?
+## Project Overview (add pictures)
 
 ROS is heavily used in research. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
 
@@ -195,11 +195,7 @@ rosrun point_cloud point_cloud
 ```
 ### Running ROS bag
 
-you will first need to download a ros bag. Download the machine hall 01 ros bag [here](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
-
-another good one could be this [one](https://projects.asl.ethz.ch/datasets/doku.php?id=iros2018incrementalobjectdatabase)
-
-but lets worry about one thing at a time...
+you will first need to download a ros bag. Download the machine hall 01 ros bag [here](https://projects.asl.ethz.ch/datasets/doku.php?id=iros2018incrementalobjectdatabase)
 
 After downloading the ros bag open 3 terminals and run these commands
 
@@ -216,10 +212,11 @@ rosbag play <bag you downloaded>
 
 ```bash
 source devel/setup.bash
-rosrun point_cloud point_cloud
+rosrun object_detection object_detection model_name:=mobilenet_v2
 ```
 
-you should see the point could ros node print data as well as the bag. to see what topics to subscribe to or what is in the bag type in.
+If all goes well the first stageo of the pipeline is running!
+To see what topics to subscribe to or what is in the bag type in.
 
 ```bash
 rosbag info <your bag>
