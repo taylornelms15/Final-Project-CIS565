@@ -29,10 +29,8 @@
 #include <fstream>
 
 #define CGLTF_WRITE_IMPLEMENTATION 1
-#define CGLTF_IMPLEMENTATION 1
+#define CGLTF_IMPLEMENTATION 
 #include "cgltf_write.h"
-
-static int iteration = 0;
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -42,104 +40,104 @@ static int iteration = 0;
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Image.h>
 #include <drone_mom_msgs/drone_mom.h>
-   std::vector<std::string> class_descriptions;
-   std::string key;
-  /**
-   * This tutorial demonstrates simple receipt of messages over the ROS system.
-   * http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28c%2B%2B%29
-   */
-  // this callback is only called once once you subscribe
-   void VisionCallback(const vision_msgs::VisionInfo& msg)
-   {
-    // print stuff to show 
-    ROS_INFO("DataBase: %s", msg.database_location.c_str());
-    ROS_INFO("method: %s", msg.method.c_str());
-     
-     // get the key to the classification database and store it in our vector
-     key = msg.database_location.c_str();
-     ros::NodeHandle nh("~");
-     nh.getParam(key, class_descriptions);
 
-   }
+static int iteration = 0;
+static std::vector<std::string> class_descriptions;
+static std::string key;
 
-   void DetectionCallback(const drone_mom_msgs::drone_mom::ConstPtr msg1)
-   {
-      // print stuff to show how stuff works
-     // Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
-     int detected_elements = msg1->classification.detections.size();
-     vision_msgs::Detection2DArray msg = msg1->classification;
-     for(int i = 0; i < detected_elements; i++)
-     {
- //        ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);
- //        ROS_INFO("bbox cx: %9.6f", msg.detections[i].bbox.center.x);
- //        ROS_INFO("bbox Y: %9.6f", msg.detections[i].bbox.size_y);
- //        ROS_INFO("bbox cy: %9.6f", msg.detections[i].bbox.center.y);
+// this callback is only called once once you subscribe
+void VisionCallback(const vision_msgs::VisionInfo& msg)
+{
+	// print stuff to show 
+	ROS_INFO("DataBase: %s", msg.database_location.c_str());
+	ROS_INFO("method: %s", msg.method.c_str());
 
- //        // there is only 1 result per detection I am 99% sure
- //        ROS_INFO("confidece: %1.6f", msg.detections[i].results[0].score);     
-     
-        int idx = msg.detections[i].results[0].id;
+	// get the key to the classification database and store it in our vector
+	key = msg.database_location.c_str();
+	ros::NodeHandle nh("~");
+	nh.getParam(key, class_descriptions);
+}
 
-        // since we got the database from setup we can now see what our bounding box contains!
-        ROS_INFO("classified: %s", class_descriptions[idx].c_str());
-	    }
+/*
+void DetectionCallback(const drone_mom_msgs::drone_mom::ConstPtr msg1)
+{
+// print stuff to show how stuff works
+// Vision messages can be found here http://docs.ros.org/melodic/api/vision_msgs/html/msg/Detection2DArray.html
+int detected_elements = msg1->classification.detections.size();
+vision_msgs::Detection2DArray msg = msg1->classification;
+for(int i = 0; i < detected_elements; i++)
+{
+	//        ROS_INFO("bbox X: %9.6f", msg.detections[i].bbox.size_x);
+	//        ROS_INFO("bbox cx: %9.6f", msg.detections[i].bbox.center.x);
+	//        ROS_INFO("bbox Y: %9.6f", msg.detections[i].bbox.size_y);
+	//        ROS_INFO("bbox cy: %9.6f", msg.detections[i].bbox.center.y);
+
+	//        // there is only 1 result per detection I am 99% sure
+	//        ROS_INFO("confidece: %1.6f", msg.detections[i].results[0].score);     
+
+	int idx = msg.detections[i].results[0].id;
+
+	// since we got the database from setup we can now see what our bounding box contains!
+	ROS_INFO("classified: %s", class_descriptions[idx].c_str());
+	}
 	cv_bridge::CvImagePtr cv_ptr;
-  try
-  {
-    cv_ptr = cv_bridge::toCvCopy(msg.detections[0].source_img, sensor_msgs::image_encodings::RGB8);
-  }
-  catch (cv_bridge::Exception& e)
-  {
-    ROS_ERROR("cv_bridge exception: %s", e.what());
-    return;
-  }
-  cv::imshow("Image window", cv_ptr->image);
-  cv::waitKey(1);  
+	try
+	{
+	cv_ptr = cv_bridge::toCvCopy(msg.detections[0].source_img, sensor_msgs::image_encodings::RGB8);
+	}
+	catch (cv_bridge::Exception& e)
+	{
+	ROS_ERROR("cv_bridge exception: %s", e.what());
+	return;
+	}
+	cv::imshow("Image window", cv_ptr->image);
+	cv::waitKey(1);  
 
 	// ROS_INFO("===height %d===",msg1->cam_info.height);
 	// ROS_INFO("===width %d===",msg1->cam_info.width);
 
 	// int time_secs = msg1->imu_msg.header.stamp.sec;
- //    int time_nsecs = msg1->imu_msg.header.stamp.nsec;
- //    double timeValue = time_secs + (1e-9 * time_nsecs);
+	//    int time_nsecs = msg1->imu_msg.header.stamp.nsec;
+	//    double timeValue = time_secs + (1e-9 * time_nsecs);
 	// ROS_INFO("===IMU %s===",msg1->imu_msg.header.frame_id.c_str());
- //    ROS_INFO("\ttime: %9.6f", timeValue);
-   
+	//    ROS_INFO("\ttime: %9.6f", timeValue);
+
 	// int time2_secs = msg1->raw_image.header.stamp.sec;
- //    int time2_nsecs =msg1->raw_image.header.stamp.nsec;
- //    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
+	//    int time2_nsecs =msg1->raw_image.header.stamp.nsec;
+	//    double timeValue2 = time2_secs + (1e-9 * time2_nsecs);
 	// ROS_INFO("===IMAGE %s===", msg1->raw_image.header.frame_id.c_str());
- //    ROS_INFO("\ttime: %9.6f", timeValue2);
-    
- //    int time3_secs = msg1->cam_info.header.stamp.sec;
- //    int time3_nsecs = msg1->cam_info.header.stamp.nsec;
- //    double timeValue3 = time3_secs + (1e-9 * time3_nsecs);
+	//    ROS_INFO("\ttime: %9.6f", timeValue2);
+
+	//    int time3_secs = msg1->cam_info.header.stamp.sec;
+	//    int time3_nsecs = msg1->cam_info.header.stamp.nsec;
+	//    double timeValue3 = time3_secs + (1e-9 * time3_nsecs);
 	// ROS_INFO("===CAMERA %s===", msg1->cam_info.header.frame_id.c_str());
- //    ROS_INFO("\ttime: %9.6f", timeValue3);
-	
+	//    ROS_INFO("\ttime: %9.6f", timeValue3);
+
 	// int time4_secs = msg1->TIC.header.stamp.sec;
- //    int time4_nsecs = msg1->TIC.header.stamp.nsec;
- //    double timeValue4 = time4_secs + (1e-9 * time4_nsecs);
+	//    int time4_nsecs = msg1->TIC.header.stamp.nsec;
+	//    double timeValue4 = time4_secs + (1e-9 * time4_nsecs);
 	// ROS_INFO("===TIC %s===", msg1->TIC.header.frame_id.c_str());
- //    ROS_INFO("\ttime: %9.6f", timeValue4);
+	//    ROS_INFO("\ttime: %9.6f", timeValue4);
 
- //    int time5_secs = msg1->TGI.header.stamp.sec;
- //    int time5_nsecs = msg1->TGI.header.stamp.nsec;
- //    double timeValue5 = time5_secs + (1e-9 * time5_nsecs);
+	//    int time5_secs = msg1->TGI.header.stamp.sec;
+	//    int time5_nsecs = msg1->TGI.header.stamp.nsec;
+	//    double timeValue5 = time5_secs + (1e-9 * time5_nsecs);
 	// ROS_INFO("===TGI %s===", msg1->TGI.header.frame_id.c_str());
- //    ROS_INFO("\ttime: %9.6f", timeValue5);
+	//    ROS_INFO("\ttime: %9.6f", timeValue5);
 
-   }
-
+}
+*/
 std::vector<std::string> class_descriptions;
 std::string key;
 
 // Forward Decl.
-void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
-void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
+void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud);
 void PointCloudToMesh(
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud,
 	pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
+void WriteMeshToGLTF(std::string label, pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
+
 
 // this is registered every image sent
 void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
@@ -147,45 +145,79 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	ROS_INFO("Got message!");
 
 	// Init static variables
-	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	static std::map<int, pcl::PointCloud<pcl::PointXYZRGBL>::Ptr> cloud_map;
+	static std::map<int, std::string> cloud_name_map;
+	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBL>);
+	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_cloud(new pcl::PointCloud<pcl::PointXYZRGBL>);
 
 	//
 	// Example code below from http://www.pointclouds.org/documentation/tutorials/greedy_projection.php
 	//
-
+	
+	// On first go around, create enough point cloud points to not worry about doing this later.
+	static bool prepopulated = false;
+	if(prepopulated == false) {
+		// Create Point Clouds
+		for(int i = 0; i < 100; i++) {
+			pcl::PointCloud<pcl::PointXYZRGBL>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZRGBL>)
+			cloud_map[i] = new_cloud;
+		}
+		
+		// Create ID-Name Relations
+		for( const auto& str : class_descriptions) {
+			cloud_name_map[cloud_name_map.size()] = str;
+		}
+		
+		// Done, only do once.
+		prepopulated = true;
+	}
+	
 	// Convert to proper format. This destroys the contents of the msg object!
 	pcl::fromROSMsg(msg, *tmp_cloud);
-	*cloud += *tmp_cloud;
-
+	
+	// Sort the incoming point cloud map into buckets based on labels
+	std::for_each(tmp_cloud->points.begin(), tmp_cloud->points.end(),
+		[=] (pcl::PointXYZRGBL& p) {
+			cloud_map[p.label]->push_back(p);
+		});
+	
+	//Increment our iteration counter
+	++iteration;
+	
 	// Write out every 20 cycles to reduce load.
-	iteration++;
 	if((iteration % 20) == 0) {
-		ROS_INFO("generating output!!");
-		pcl::PolygonMesh mesh;
-		pcl::PointXYZRGBNormal min;
-		pcl::PointXYZRGBNormal max;
-		
-		ROS_INFO("Reducing...");
-		ReducePointCloud(cloud);
-		
-		ROS_INFO("Generating Mesh...");
-		PointCloudToMesh(cloud, mesh, min, max);
-		
-		ROS_INFO("Writing to output file...");
-		WriteMeshToGLTF(mesh, min, max);
-		
-		ROS_INFO("Done!");
-		cloud->clear(); // Don't reuse points after outputting to model once.
+		for(const auto& kv : cloud_map) {
+			int id = kv.first;
+			auto cloud = kv.second;
+			std::string label = cloud_name_map[id];
+			
+			ROS_INFO("Working on Point cloud id %d (%s)", id, label);
+			
+			ROS_INFO("\tGenerating output!!");
+			pcl::PolygonMesh mesh;
+			pcl::PointXYZRGBNormal min;
+			pcl::PointXYZRGBNormal max;
+			
+			ROS_INFO("\tReducing...");
+			ReducePointCloud(cloud);
+			
+			ROS_INFO("\tGenerating Mesh...");
+			PointCloudToMesh(cloud, mesh, min, max);
+			
+			ROS_INFO("\tWriting to output file...");
+			WriteMeshToGLTF(label, mesh, min, max);
+			
+			ROS_INFO("\tDone with Point Cloud id %d (%s)!", id, label);
+		}
 	}
 }
 
 // Takes an input mesh and writes it to a file with an incrementing ID
-void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max)
+void WriteMeshToGLTF(std::string label, pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max)
 {
 	static int mesh_count = 0;
 	
-	std::string basename = "mesh_" + std::to_string(mesh_count);
+	std::string basename = "mesh_" + label + "_" + std::to_string(mesh_count);
 	
 	//std::string filename = "mesh_" + std::to_string(mesh_count++) + ".obj";
 	//pcl::io::saveOBJFile(filename, mesh);
@@ -409,7 +441,7 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 	scene[0].nodes_count = 1;
 	data.scenes = scene;
 	data.scenes_count = 1;
-	data.scene = NULL; 
+	data.scene = NULL;
 
 	///////////////////////////////////////////////////
 	// Write out to file.
@@ -434,16 +466,16 @@ void WriteMeshToGLTF(pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::P
 // greedy projection triangles. Still need to play with some other algorithms
 // to see what is most performant (plus what is best ported to GPU).
 void PointCloudToMesh(
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud,
 	pcl::PolygonMesh& mesh,
 	pcl::PointXYZRGBNormal& min,
 	pcl::PointXYZRGBNormal& max)
 {
-	static pcl::search::KdTree<pcl::PointXYZRGB>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
-	static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
-	static pcl::PointCloud<pcl::Normal>::Ptr                normals (new pcl::PointCloud<pcl::Normal>);
-	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr     cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+	static pcl::search::KdTree<pcl::PointXYZRGBL>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGBL>);
+	static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr  tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
+	static pcl::PointCloud<pcl::Normal>::Ptr                 normals (new pcl::PointCloud<pcl::Normal>);
+	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr      cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
+	static pcl::PointCloud<pcl::PointXYZRGBL>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGBL>);
 	
 	// Transform pointcloud from ROS coords to GLTF coords
 	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#coordinate-system-and-units
@@ -452,7 +484,7 @@ void PointCloudToMesh(
 	// y -> -x
 	// z -> y
 	std::for_each(cloud->points.begin(), cloud->points.end(),
-		[](pcl::PointXYZRGB& p) {
+		[](pcl::PointXYZRGBL& p) {
 			float oldx, oldy, oldz;
 			oldx = p.x;
 			oldy = p.y;
@@ -467,8 +499,10 @@ void PointCloudToMesh(
 	std::vector<int> throw_away;
 	pcl::removeNaNFromPointCloud(*cloud, *cloud, throw_away);
 
-	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes. 
-	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
+	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes.
+	// Will also throw out the label at this point since we don't need it.
+	// We wait until now because to remove it earlier takes unneeded cycles.
+	pcl::MovingLeastSquares<pcl::PointXYZRGBL, pcl::PointXYZRGBNormal> mls;
 	std::cout << "Before MLS: " << cloud->points.size() << std::endl;
 	tree->setInputCloud(cloud);
 	mls.setComputeNormals(true);
@@ -571,6 +605,9 @@ int main(int argc, char **argv)
 	*/  
 	// Data from rosbag used for testing
 	ros::Subscriber sub3 = n.subscribe("/point_cloud_G", 1000, PointCloud2Callback);
+	
+	// Subscribe to the map of detection IDS.
+	ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
 
 	ROS_INFO("point cloud, waiting for messages");
 	
