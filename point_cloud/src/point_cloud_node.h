@@ -31,6 +31,12 @@
 
     }//makeCloudPtr
 
+    /**
+    Publishes our static point cloud that we've been building
+    After which it is Not Our Problem! (sorta)
+    */
+    void publishPointCloud();
+
     void setCloudPoints(PointT_cloud &cloud, PointT_vec &vec){
         cloud.points = vec;
         cloud.height = 1;

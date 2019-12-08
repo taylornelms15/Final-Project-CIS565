@@ -15,9 +15,9 @@
 #define SKIPFRAMES      1
 #define SYNCFRAMES      8
 
-#define ALIGNMENT_ITERATIONS 18
+#define ALIGNMENT_ITERATIONS 20
 #define ALIGNMENT_EPSILON 1e-6
-#define ALIGNMENT_DISTMAX 0.07
+#define ALIGNMENT_DISTMAX 0.08
 #define ALIGNMENT_FILTER_SCALE 0.038
 
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m...maybe
@@ -36,6 +36,8 @@
     const static char xformSubPath1[]   = "tango_viwls/T_G_I";//tranformation for global system
     const static char xformSubPathC[]   = "tango/T_I_C_color";//tranformation for color camera
     const static char xformSubPathD[]   = "tango/T_I_C_depth";//tranformation for depth camera
+
+    ros::Publisher* pcloud_pub = NULL;
     
     static sensor_msgs::CameraInfo      caminfo;
     static sensor_msgs::CameraInfo      dcaminfo;
@@ -463,7 +465,8 @@
         if (numMatches % ENDFRAMENUM == 0){
             pcl::io::savePCDFile("testOutput.pcd", pcloud);
             ROS_INFO("Successfully ran %d matches", numMatches);
-            ros::shutdown();
+            publishPointCloud(); 
+            //ros::shutdown();
         }//if
 
         return;
@@ -506,6 +509,11 @@
       */
 
         ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 1000, DetectionCallback);
+
+
+        //Advertise that we will totally publish something
+        ros::Publisher pub = n.advertise<PointT_cloud>("dronemom_pointcloud", 100);
+        *pcloud_pub = pub;
 
         //small function to verify our link to CUDA
         //This will almost certainly remain unused and useless
@@ -662,6 +670,18 @@
         #endif
         return retval;
 
-    }
+    }//pairAlign
+
+    void publishPointCloud(){
+        PointT_cloud_ptr msg = makeCloudPtr(pcloud); 
+        msg->header.frame_id = "some_point_tf_frame";
+        msg->height = 1;
+        msg->width = pcloud.size();
+        pcl_conversions::toPCL(ros::Time::now(), msg->header.stamp);
+        pcloud_pub->publish(msg);
+
+        return;
+
+    }//publishPointCloud
 
 
