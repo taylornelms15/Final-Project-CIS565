@@ -21,6 +21,8 @@ This repository is laid out in the following manner. The top level README lays o
 
 ROS is heavily used in research. ROS is a message passing backbone for use in Drone and other robotic applications. ROS systems consist of a central ROS Core and several ROS Nodes that may subscribe and publish messages. ROS also contains support for various robotics libraries. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
 
+
+
 ## Design
 
 ![](images/dronemom_pipeline.png)
@@ -29,7 +31,14 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ## Results
 
-add results of system here results of components are in READmes of the components
+Further information and alysis can be found in the actual folder of the ROS node. Because we are utilizing ROS each subcomponent has its own readme. This is because users usign ROS can drag and drop nodes
+
+## Performance Analysis
+
+Data was collected of running inference on the CPU and GPU FP16 is an optimzation that tensorRT makes where it can turn your FP32 to FP16 types without losing any precision in inference. TensorRT also supports Int8 but this is not supported on the Jetson Nano and as such is not shown. 
+
+![](images/trt_graph.png)
+
 
 ## Build Instructions
 
@@ -234,6 +243,11 @@ rosbag info <your bag>
 * [Equation for Ray Closest Intersections](http://morroworks.palitri.com/Content/Docs/Rays%20closest%20point.pdf)
 * [Trifocal Tensor Code](https://github.com/cchampet/TrifocalTensor)
 * [Marton, et al. "On Fast Surface Reconstruction Methods for Large and Noisy Datasets"](chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://ias.informatik.tu-muenchen.de/_media/spezial/bib/marton09icra.pdf)
+
+
+# Credits 
+
+RandInt8Calibrator.cpp and plugin.cpp are from nvidia and are credited as such. They were needed to perform proper calibration and building of tensorRT engines
 
 
 
