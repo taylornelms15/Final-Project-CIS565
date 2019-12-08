@@ -1,5 +1,3 @@
-
- 
 #include "ObjectDetection.h"
 
 #include "../cuda_utilities/imageNet.cuh"

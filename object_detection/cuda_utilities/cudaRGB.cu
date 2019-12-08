@@ -1,4 +1,3 @@
-
 #include "cudaRGB.h"
 
 __global__ void RGBToRGBAf(uchar3* srcImage,
