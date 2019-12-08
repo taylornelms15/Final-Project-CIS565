@@ -128,13 +128,11 @@ for(int i = 0; i < detected_elements; i++)
 
 }
 */
-std::vector<std::string> class_descriptions;
-std::string key;
 
 // Forward Decl.
-void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud);
+void ReducePointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 void PointCloudToMesh(
-	pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
 	pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
 void WriteMeshToGLTF(std::string label, pcl::PolygonMesh& mesh, pcl::PointXYZRGBNormal& min, pcl::PointXYZRGBNormal& max);
 
@@ -145,10 +143,10 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	ROS_INFO("Got message!");
 
 	// Init static variables
-	static std::map<int, pcl::PointCloud<pcl::PointXYZRGBL>::Ptr> cloud_map;
+	static std::map<int, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_map;
 	static std::map<int, std::string> cloud_name_map;
-	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBL>);
-	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp_cloud(new pcl::PointCloud<pcl::PointXYZRGBL>);
+	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+	static pcl::PointCloud<pcl::PointXYZRGBL>::Ptr tmp_cloud(new pcl::PointCloud<pcl::PointXYZRGBL>);
 
 	//
 	// Example code below from http://www.pointclouds.org/documentation/tutorials/greedy_projection.php
@@ -159,7 +157,7 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	if(prepopulated == false) {
 		// Create Point Clouds
 		for(int i = 0; i < 100; i++) {
-			pcl::PointCloud<pcl::PointXYZRGBL>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZRGBL>)
+			pcl::PointCloud<pcl::PointXYZRGB>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 			cloud_map[i] = new_cloud;
 		}
 		
@@ -167,6 +165,7 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 		for( const auto& str : class_descriptions) {
 			cloud_name_map[cloud_name_map.size()] = str;
 		}
+		cloud_name_map[255] = "No Label";
 		
 		// Done, only do once.
 		prepopulated = true;
@@ -178,14 +177,19 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	// Sort the incoming point cloud map into buckets based on labels
 	std::for_each(tmp_cloud->points.begin(), tmp_cloud->points.end(),
 		[=] (pcl::PointXYZRGBL& p) {
-			cloud_map[p.label]->push_back(p);
+			pcl::PointXYZRGB newp;
+			newp.x = p.x;
+			newp.y = p.y;
+			newp.z = p.z;
+			newp.rgb = p.rgb;
+			cloud_map[p.label]->push_back(newp);
 		});
 	
 	//Increment our iteration counter
 	++iteration;
 	
 	// Write out every 20 cycles to reduce load.
-	if((iteration % 20) == 0) {
+	if(/*(iteration % 1) == 0 */ true) {
 		for(const auto& kv : cloud_map) {
 			int id = kv.first;
 			auto cloud = kv.second;
@@ -466,16 +470,16 @@ void WriteMeshToGLTF(std::string label, pcl::PolygonMesh& mesh, pcl::PointXYZRGB
 // greedy projection triangles. Still need to play with some other algorithms
 // to see what is most performant (plus what is best ported to GPU).
 void PointCloudToMesh(
-	pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
 	pcl::PolygonMesh& mesh,
 	pcl::PointXYZRGBNormal& min,
 	pcl::PointXYZRGBNormal& max)
 {
-	static pcl::search::KdTree<pcl::PointXYZRGBL>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGBL>);
+	static pcl::search::KdTree<pcl::PointXYZRGB>::Ptr       tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	static pcl::search::KdTree<pcl::PointXYZRGBNormal>::Ptr  tree2 (new pcl::search::KdTree<pcl::PointXYZRGBNormal>);
 	static pcl::PointCloud<pcl::Normal>::Ptr                 normals (new pcl::PointCloud<pcl::Normal>);
 	static pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr      cloud_with_normals (new pcl::PointCloud<pcl::PointXYZRGBNormal>);
-	static pcl::PointCloud<pcl::PointXYZRGBL>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGBL>);
+	static pcl::PointCloud<pcl::PointXYZRGB>::Ptr           temp_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 	
 	// Transform pointcloud from ROS coords to GLTF coords
 	// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#coordinate-system-and-units
@@ -484,7 +488,7 @@ void PointCloudToMesh(
 	// y -> -x
 	// z -> y
 	std::for_each(cloud->points.begin(), cloud->points.end(),
-		[](pcl::PointXYZRGBL& p) {
+		[](pcl::PointXYZRGB& p) {
 			float oldx, oldy, oldz;
 			oldx = p.x;
 			oldy = p.y;
@@ -502,7 +506,7 @@ void PointCloudToMesh(
 	// Moving Least Squares. Used for smoothing out incoming data and filling in some holes.
 	// Will also throw out the label at this point since we don't need it.
 	// We wait until now because to remove it earlier takes unneeded cycles.
-	pcl::MovingLeastSquares<pcl::PointXYZRGBL, pcl::PointXYZRGBNormal> mls;
+	pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointXYZRGBNormal> mls;
 	std::cout << "Before MLS: " << cloud->points.size() << std::endl;
 	tree->setInputCloud(cloud);
 	mls.setComputeNormals(true);
