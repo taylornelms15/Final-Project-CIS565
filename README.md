@@ -1,13 +1,43 @@
 # Drone Mom
 ## CIS565 Final Project for John Marcao, Eric Micallef, and Taylor Nelms
 
+- [Problem Statement](#Problem-Statement)
+- [Repo Structure](#Repo-Structure) 
+- [Project Overview](#Project-Overview)
+- [Design](#Design)
+- [Results](#Results)
+- [Build Instructions](#Build-Instructions)
+
+
+## Problem Statement
+
+Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can create 3D models in real time?
+
+## Repo Structure
+
+This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
+
+## Project Overview?
+
+ROS is heavily used in research. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
+
+## Design
+
+add picture of pipeline 
+
+The first step in our pipeline is to classify the important objects in a scene. This is done for two reasons. Reason 1 is that we need to be able to give a description of what objects are in a scene. The second reason is that we can give boundingboxes to the point cloud on where to focus in on. Point cloud computation is expensive so this is one way of optimizing. Only generate a point cloud in regions where we are interested in. after the point cloud is generated we can then render a 3d mesh!
+
+## Results
+
+add results of system here results of components are in READmes of the components
+
 ## Build Instructions
 
-## Do not clone this repo until the instructions tell you to.
+### Do not clone this repo until the instructions tell you to.
 
 you need to build a ROS workspace first...
 
-## Installation
+### Installation
 
 First, install the latest [JetPack](https://developer.nvidia.com/embedded/jetpack) on your Jetson (JetPack 4.2.2 for ROS Melodic or JetPack 3.3 for ROS Kinetic on TX1/TX2).
 
@@ -15,18 +45,17 @@ Once you are logged onto your jetson continue.
 
 ### ROS Core
 
-These ROS nodes use the DNN objects from the jetson-inference project (aka Hello AI World). To build and install it, see this page or run the commands below:
+Luckily tensorRT comes pre installed on the jetpack. We just need to insteall a few extra plugins for streaming 
 
 ```bash
 cd ~
 sudo apt-get install git cmake
-git clone --recursive https://github.com/dusty-nv/jetson-inference
-cd jetson-inference
-mkdir build
-cd build
-cmake ../
-make
-sudo make install
+sudo apt-get update
+sudo apt-get install -y dialog
+sudo apt-get install -y libglew-dev glew-utils libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libglib2.0-dev
+sudo apt-get install -y libopencv-calib3d-dev libopencv-dev 
+sudo apt-get update
+
 ```
 
 Install the `ros-melodic-ros-base`package on your Jetson following [these](
@@ -67,7 +96,21 @@ We are using some of the non-standard features from OpenCV (specifically, SURF f
 sudo apt-get install -y build-essential cmake git pkg-config libgtk-3-dev libglm-dev
 sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev
 sudo apt-get install -y libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev libtbb2 libtbb-dev libdc1394-22-dev
+sudo apt-get install -y libeigen3-dev libgflags-dev libgoogle-glog-dev libsuitesparse-dev libatlas-base-dev
+```
+We need to install the Ceres solver as well before we get openCV up and running:
 
+```bash
+git clone https://ceres-solver.googlesource.com/ceres-solver
+cd ceres-solver
+mkdir build && cd build
+cmake ..
+make -j4
+sudo make install
+```
+Now we can get all the openCV parts together:
+
+```bash
 mkdir ~/opencv_build && cd ~/opencv_build
 git clone https://github.com/opencv/opencv.git
 git clone https://github.com/opencv/opencv_contrib.git
@@ -75,15 +118,18 @@ cd ~/opencv_build/opencv
 mkdir build && cd build
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D WITH_CUDA=ON \
+    -D ENABLE_FAST_MATH=1 \
+    -D CUDA_FAST_MATH=1 \
+    -D WITH_CUBLAS=1 \
     -D OPENCV_GENERATE_PKGCONFIG=ON \
     -D OPENCV_EXTRA_MODULES_PATH=~/opencv_build/opencv_contrib/modules \
     -D OPENCV_ENABLE_NONFREE=ON ..
-make -j4
-sudo make install
+make -j4 && sudo make install
 ```
 This process may take a little bit to complete.
 
-#### Create Workspace
+### Create Workspace
 
 Now you must make the catkin workspace or your DroneMoM workspace. How ever you like to think about it.
 
@@ -179,103 +225,7 @@ you should see the point could ros node print data as well as the bag. to see wh
 rosbag info <your bag>
 ```
 
-### Application/Framework Resources CURRENTLY UNUSED IGNORE THIS
-
-#### NVIDIA SDK Manager
-* [NVidia SDK Manager](https://developer.nvidia.com/embedded/downloads)
-
-This is the platform I plan to use to develop on the Jetson platform
-
-##### Installation Instructions
-
-**NOTE**: Native linux is required for using the NVidia SDK Manager. I tried a workaround with Windows Subsystem Linux, but in the end, this was pretty much infeasible.
-
-1. Initial OS flash on Jetson Nano
-
-    For this, you will need a MicroSD card with the [Jetson Nano Boot Image](https://developer.nvidia.com/jetson-nano-sd-card-image-r3221) installed. Instructions can be had from [here](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit#write).
-    
-    You will need to connect it to a monitor, mouse, and keyboard to do the initial Ubuntu setup, once the disk is flashed and inserted into the device
-
-2. Install SDK Manager
-
-    Start up your linux machine, and navigate to the `Downloads` folder.
-
-    Then, execute:
-    ```
-    sudo apt-get update
-    sudo apt-get -y install libgtk-3-0
-    sudo apt-get -y install libx11-xcb-dev
-    sudo apt-get -y install libxss1
-    sudo apt install ./sdkmanager_0.9.14-4964_amd64.deb
-    ```
-
-    Then, with the X-server up and running, you can execute:
-    ```
-    sdkmanager
-    ```
-    This will start up the NVIDIA SDK Manager
-
-3. Install Drivers and Components
-
-    [This link](https://docs.nvidia.com/sdk-manager/install-with-sdkm-jetson/index.html) describes how to configure the SDK. The notable changes you'll want to make from the default are:
-
-    1. Choose the Jetson Nano hardware platform
-    2. Choose to install the Deepstream SDK option, just in case.
-
-    Note that this will take something like 20GB on your computer, so be aware before you start this process.
-
-4. Flash the chip onto the Nano
-    
-    For this, you'll need to:
-    
-    1. Have your Jetson Nano connected to your computer with a MicroUSB connector
-    2. Have your Jetson Nano connected to your local area network, so the host computer can SSH into it
-    3. Know the IP address of your Jetson Nano (`ip addr show`)
-    4. Have your Jetson Nano up and running
-    
-    The SDK Manager will guide you through the process, but it's pretty much a matter of inputting the IP Address, username, and password for your Nano, and then letting the SDK Manager handle the rest.
-    
-5. Install SDK Components onto Jetson Nano
-    
-    At some point in the flashing process, the SDK Manager will effectively wipe the contents of your Jetson Nano, and you'll need to go through the initial setup again.
-    
-    Once you set your username and password again, log in, and find your IP address again, you can select "Install" on the SDK Manager to put all the relevant development drivers onto the Nano.
-    
-6. Start Developing
-
-    The SDK Manager will install [NSight Eclipse Edition](https://developer.nvidia.com/nsight-eclipse-edition) automatically.
-    
-    This is the tool we can use to develop on our host machine and run the software on the Jetson device itself. I'm still figuring out the next steps on how to do this. ([This](https://devblogs.nvidia.com/cuda-jetson-nvidia-nsight-eclipse-edition/) seems like a good starting point, though!)
-
-#### Deepstream SDK
-
-* [DeepStream SDK](https://developer.nvidia.com/deepstream-sdk)
-  * Potential structure by which to take in video feed input; can do direct camera feed or video file input
-  * Possibility of just making use of the very front end of one of their sample pipelines, then implementing our own after that point
-
-I recommend installing this through the [NVIDIA SDK Manager](#NVIDIA-SDK-Manager); the steps in that section should detail how to get it up and running.
-
-#### Downloading the MIT Dataset
-
-I've set up a python script for downloading a subsection of the mit dataset. You may need to run the following commands to get it to run:
-```
-sudo apt-get install pip3
-pip3 install wget
-```
-
-To use it, navigate to a subfolder of the [MIT Blackbird Dataset Download Site](http://blackbird-dataset.mit.edu/BlackbirdDatasetData/) that you wish to install, and copy the URL of that folder. Then you can run:
-
-```
-python3 downloadMitSubfolder.py [-o OutputdirectoryName] URL_Path_To_Recursively_Download
-```
-
-This will download all the relevant files to a given directory root. Example usage:
-
-```
-python3 downloadMitSubfolder.py http://blackbird-dataset.mit.edu/BlackbirdDatasetData/clover/yawConstant/maxSpeed2p0/ -o../Datasets/Clover/maxSpeed2p0/
-```
-
-### References
+# References
 
 * [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
   * Huge dump of drone data for processing
