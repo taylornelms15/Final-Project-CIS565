@@ -4,30 +4,31 @@
 #define DEBUGOUT 1
 
 #define DEBUGCAMINFO (DEBUGOUT && 0)
-#define DEBUGIMAGE (DEBUGOUT && 1)
+#define DEBUGIMAGE (DEBUGOUT && 0)
 #define DEBUGXFORM (DEBUGOUT && 0)
 #define DEBUGCLOUD (DEBUGOUT && 1)
 
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM 2
-#define SKIPFRAMES  1
+#define ENDFRAMENUM     96
+#define SKIPFRAMES      1
+#define SYNCFRAMES      8
 
-#define ALIGNMENT_ITERATIONS 10
+#define ALIGNMENT_ITERATIONS 20
 #define ALIGNMENT_EPSILON 1e-6
-#define ALIGNMENT_DISTMAX 0.1
-#define ALIGNMENT_FILTER_SCALE 0.035
+#define ALIGNMENT_DISTMAX 0.08
+#define ALIGNMENT_FILTER_SCALE 0.038
 
-//This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m
-#define SCALING (100.0/65535.0)//1/256 also seemed close, so we could be way off the mark
-//#define SCALING (1000.0 / 65535)
+//This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m...maybe
+#define SCALING (100.0/65535.0)//this should definitely stay here now, other scaling factors are based off it
 
 //using namespace cv;
 //using namespace cv::xfeatures2d;
 
 
     const static char dronemomSubPath[] = "detectnet/detections";
+    //other paths unused
     const static char imageSubPath[]    = "camera/rgb/image_raw";
     const static char camInfoSubPath[]  = "camera/rgb/camera_info";
     const static char dimageSubPath[]   = "camera/depth/image_raw";
@@ -35,6 +36,8 @@
     const static char xformSubPath1[]   = "tango_viwls/T_G_I";//tranformation for global system
     const static char xformSubPathC[]   = "tango/T_I_C_color";//tranformation for color camera
     const static char xformSubPathD[]   = "tango/T_I_C_depth";//tranformation for depth camera
+
+    ros::Publisher* pcloud_pub = NULL;
     
     static sensor_msgs::CameraInfo      caminfo;
     static sensor_msgs::CameraInfo      dcaminfo;
@@ -42,9 +45,11 @@
     ///Global point cloud
     static PointT_cloud pcloud       = PointT_cloud(); 
     static PointT_cloud prevcloud    = PointT_cloud();
-    static tf2::Transform          prevxform;
+    static tf2::Transform              firstxform;
+    static tf2::Transform              prevxform;
+    static tf2::Transform              cumulativeError = tf2::Transform::getIdentity();
 
-    static int                          numMatches  = 0;
+    static int                         numMatches  = 0;
 
 
     /**
@@ -284,7 +289,8 @@
         //gvec3_vec pointsWorldspace = pointsCamspace;
 
         //create color factor (for debugging)
-        gvec3 factorF = gvec3(1.0, 0.99, 0.99); gvec3 factor = gvec3(1.0, 1.0, 1.0);
+        //gvec3 factorF = gvec3(1.0, 0.97, 0.97); gvec3 factor = gvec3(1.0, 1.0, 1.0);
+        gvec3 factorF = gvec3(1.0, 1.0, 1.0); gvec3 factor = gvec3(1.0, 1.0, 1.0);
         for(int i = 0; i < numMatches; i++){
             factor *= factorF;
         }//for
@@ -295,13 +301,85 @@
                                                classification,
                                                factor);
 
-        //breakpoint target so we don't fill our point cloud too much
-        if (numMatches % ENDFRAMENUM == 0){
-            pcl::io::savePCDFile("testOutput.pcd", pcloud);
-            ROS_INFO("Successfully ran %d matches", numMatches);
-        }//if
         return retval;
     }//pointsFromRGBD
+
+
+    /**
+    Does alignment from the previous frame to the current frame
+    Then, updates our cumulative error, applies it to our current frame, and
+    adds the incoming (current) frame into the global static pcloud.
+    Note: may not actually care about the transformation guesses
+
+    Does not return anything; updates all static variables according to what it good and proper
+
+    @param  incoming            Point cloud from the most recent frame
+    @param  bagGuess            The rosbag's guess at camera position for the most recent frame
+    @param  previous            Point cloud from the frame before this one
+    @param  prevGuess           The rosbag's guess at camera position for the frame before this one
+    */
+    void accumulatePointCloud(PointT_cloud incoming, tf2::Transform bagGuess,
+                              PointT_cloud previous, tf2::Transform prevGuess){
+        ROS_INFO("===Accumulating Point cloud for match number %d===", numMatches);
+
+        //align current point cloud to the previous frame
+        tf2::Transform curToPrevXform = pairAlign(previous, incoming, prevGuess, bagGuess);
+
+        //update the cumulative error
+        cumulativeError = cumulativeError * curToPrevXform;
+
+        //apply the cumulative error to our current frame
+        Eigen::Matrix4f errorEigen = transformFromTf2(cumulativeError);
+        PointT_cloud transformedCurrent = PointT_cloud();
+        pcl::transformPointCloud(incoming, transformedCurrent, errorEigen, true);
+
+        //update our global point cloud with the new frame's points THIS UPDATES THE STATIC CLOUD
+        pcloud += transformedCurrent;
+
+        //EVENTUAL TODO: filter every however many frames, perhaps reset the cumulative error at that point too (to avoid drift)
+
+
+        //Make our current frame the "previous" for the next iteration
+        prevcloud = incoming;
+        prevxform = bagGuess;
+
+    }//accumulatePointCloud
+
+    void syncPointCloud(PointT_cloud incoming, tf2::Transform bagGuess,
+                        PointT_cloud cumulative, tf2::Transform totalError){
+        ROS_INFO("===Syncing Point cloud for match number %d===", numMatches);
+
+        //Transform our incoming point cloud by our total error so far (for the previous frame)
+        Eigen::Matrix4f errorEigen = transformFromTf2(totalError);
+        PointT_cloud transformedCurrent = PointT_cloud();
+        pcl::transformPointCloud(incoming, transformedCurrent, errorEigen, true);
+
+        //Get the transformation needed to align the fresh cloud to the total cloud
+        tf2::Transform curToPrevXform = pairAlign(cumulative, transformedCurrent, totalError, bagGuess);//the transform params don't mean shit
+
+        //transform our incoming frame again to add it to the total
+        errorEigen = transformFromTf2(curToPrevXform);
+        PointT_cloud extratransformedCurrent = PointT_cloud();
+        pcl::transformPointCloud(transformedCurrent, extratransformedCurrent, errorEigen, true);
+
+        //update our global point cloud with the new frame's points THIS UPDATES THE STATIC CLOUD
+        pcloud += extratransformedCurrent;
+
+        //make our cumulative error reflect this series of transforms
+        cumulativeError = curToPrevXform * totalError;//error is switched because we figured it out the reverse way (I HOPE)
+        //cumulativeError = totalError * curToPrevXform;//error is switched because we figured it out the reverse way (I HOPE)
+
+        //Make our current frame the "previous" for the next iteration
+        prevcloud = incoming;
+        prevxform = bagGuess;
+
+        #if DEBUGCLOUD
+        char filenameC[100]; std::sprintf(filenameC, "cloudsync_%d.pcd", numMatches);
+        cloudwrite(filenameC, pcloud);
+        #endif
+
+ 
+    }//syncPointCloud
 
     /**
     Helper function to display some points relative to our viewpoint
@@ -339,23 +417,17 @@
         tf2::fromMsg(msg->TIC_color.transform, xformC);
         tf2::fromMsg(msg->TGI.transform, xformG);
         
+        //these lines helped make a "video" to track how things actually moved
         //char filenameC[100]; std::sprintf(filenameC, "color_image%d.png", numMatches);
         //imwrite(filenameC, cImage);
 
-        ROS_INFO("===DRONEMOM MESSAGE==");
-
-
-        //make our direction offset point for the "WTF" questions
         tf2::Transform thisXform = xformC * xformG;
-        tf2::Transform otherXform = xformG;
-        makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
+
+        //make our direction offset point to track "camera path"
+        //makeDirectionOffsetPoint(thisXform, 0, 0, 0, 255, 0, 255);
         //makeDirectionOffsetPoint(thisXform, .01, 0, 0, 255, 0, 0);
         //makeDirectionOffsetPoint(thisXform, 0, .01, 0, 0, 255, 0);
         //makeDirectionOffsetPoint(thisXform, 0, 0, .01, 0, 0, 255);
-        makeDirectionOffsetPoint(thisXform, 0, .01, 0, 255, 0, 0);
-        makeDirectionOffsetPoint(thisXform, 0, 0, -.01, 0, 255, 0);
-        makeDirectionOffsetPoint(thisXform, -.01, 0, 0, 0, 0, 255);
-        //testing other xform direction
 
 
         //Pass messages on to our point-cloud-making machine
@@ -364,22 +436,43 @@
             ccaminfo, dcaminfo,
             msg->classification);
 
-        if (numMatches == 1){
-            //move our retval to our point cloud
-            setCloudPoints(prevcloud, bunchOfPoints);
-            prevxform = thisXform;
-        }//if first frame
-        else{
-            //TODO: try some point cloud alignment
-            PointT_cloud cloudIn = PointT_cloud();
-            setCloudPoints(cloudIn, bunchOfPoints);
-            tf2::Transform requiredXform  = pairAlign(prevcloud, cloudIn,
-                                                      prevxform, thisXform);
-            ros::shutdown();
-        }//else, align some stuff
+        //move our retval to our point cloud
+        PointT_cloud thisFrameCloud;
+        setCloudPoints(thisFrameCloud, bunchOfPoints);
+        thisFrameCloud = filterIncoming(thisFrameCloud);
 
+        if (numMatches == 1){
+            pcloud      += thisFrameCloud;
+            prevcloud   = thisFrameCloud;
+            prevxform   = thisXform;
+            firstxform  = thisXform;
+        }//if
+        else if (numMatches % SYNCFRAMES == 0){
+
+            syncPointCloud(thisFrameCloud, thisXform, pcloud, cumulativeError);
+
+            //filter our global cloud at this point to keep point numbers down
+            pcloud = filterVoxel(pcloud, ALIGNMENT_FILTER_SCALE / 2.0);
+
+        }//else if syncing our input back to the static cloud
+        else{
+
+            accumulatePointCloud(thisFrameCloud, thisXform, prevcloud, prevxform);
+
+        }//else
+        
+        //breakpoint target so we don't fill our point cloud too much
+        if (numMatches % ENDFRAMENUM == 0){
+            pcl::io::savePCDFile("testOutput.pcd", pcloud);
+            ROS_INFO("Successfully ran %d matches", numMatches);
+            publishPointCloud(); 
+            //ros::shutdown();
+        }//if
+
+        return;
 
     }//void
+
 
     int main(int argc, char **argv){
 
@@ -417,7 +510,13 @@
 
         ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 1000, DetectionCallback);
 
+
+        //Advertise that we will totally publish something
+        ros::Publisher pub = n.advertise<PointT_cloud>("dronemom_pointcloud", 100);
+        *pcloud_pub = pub;
+
         //small function to verify our link to CUDA
+        //This will almost certainly remain unused and useless
         float array1[32];
         float array2[32];
         for (int i = 0; i < 32; i++){
@@ -447,24 +546,45 @@
     //########################################################
 
     /**
-    Filter an incoming cloud down for alignment
+    Filter an incoming cloud down for alignment (or anything)
     */
-    PointT_cloud filterVoxel(const PointT_cloud cloud){
+    PointT_cloud filterVoxel(const PointT_cloud cloud, double filterscale){
         PointT_cloud_ptr cloud_ptr = makeCloudPtr(cloud);
         pcl::ApproximateVoxelGrid<PointT> sor;
         sor.setInputCloud(cloud_ptr);
-        sor.setLeafSize(ALIGNMENT_FILTER_SCALE, ALIGNMENT_FILTER_SCALE, ALIGNMENT_FILTER_SCALE);
+        sor.setLeafSize(filterscale, filterscale, filterscale);
         PointT_cloud retval = PointT_cloud();
         sor.filter(retval);
-        ROS_INFO("Beginning points: %zu\tEnding points:%zu", cloud.size(), retval.size());
+        #if DEBUGCLOUD
+        //ROS_INFO("Scale %f\tBeginning points: %zu Ending points:%zu", filterscale, cloud.size(), retval.size());
+        #endif
         return retval;
 
     }//filterVoxel
 
-    ///Just a dumb little function renaming
-    void cloudwrite(const char filename[], const PointT_cloud cloud){
-        pcl::io::savePCDFile(filename, cloud);
-    }//outputCloud
+    PointT_cloud filterOutlier(const PointT_cloud cloud){
+        PointT_cloud_ptr cloud_ptr = makeCloudPtr(cloud);
+        pcl::StatisticalOutlierRemoval<PointT> sor;
+        sor.setInputCloud(cloud_ptr);
+        PointT_cloud retval = PointT_cloud();
+        sor.filter(retval);
+        #if DEBUGCLOUD
+        //ROS_INFO("Meank %d\tBeginning points: %zu Ending points:%zu", sor.getMeanK(), cloud.size(), retval.size());
+        #endif
+        return retval;
+
+    }//filterShadow
+
+    PointT_cloud filterIncoming(PointT_cloud &incoming){
+        PointT_cloud interim = filterVoxel(incoming, ALIGNMENT_FILTER_SCALE / 2.0);//cull some noise out of the system, but keep most of the points 
+
+        //future expansion: try to cull outliers
+        PointT_cloud retval = filterOutlier(interim);
+
+
+        return retval;
+    }//filterIncoming
+
 
     Eigen::Matrix4f     transformFromTf2(const tf2::Transform xform){
         tf2::Stamped<tf2::Transform> xformstamped;
@@ -483,26 +603,30 @@
         return retval;
     }//transformFromEigen
 
+    //TODO: get rid of the transform parameters, they're actually irrelevant here
     tf2::Transform pairAlign(const PointT_cloud& cloud_tgt,
                    const PointT_cloud& cloud_src,
                    tf2::Transform& tgtXform,
                    tf2::Transform& srcXform){
-        ROS_INFO("BEGINNING ALIGNMENT");//TODO: allow for down-filtering to speed up computation
+        #if DEBUGCLOUD
+        //ROS_INFO("BEGINNING ALIGNMENT");
+        #endif
+        ros::Time begin = ros::Time::now();
 
         tf2::Transform estimatedT = relativeRotateAndTranslateT(srcXform, tgtXform);
         Eigen::Matrix4f estimated = transformFromTf2(estimatedT);
 
         //filter input clouds
-        PointT_cloud cloud_tgt1 = filterVoxel(cloud_tgt);
-        PointT_cloud cloud_src1 = filterVoxel(cloud_src);
+        PointT_cloud cloud_tgt1 = filterVoxel(cloud_tgt, ALIGNMENT_FILTER_SCALE);
+        PointT_cloud cloud_src1 = filterVoxel(cloud_src, ALIGNMENT_FILTER_SCALE);
 
         PointT_cloud combined = PointT_cloud();
         #if DEBUGCLOUD
-        combined += cloud_src1;
-        combined += cloud_tgt1;
-        cloudwrite("cloud_src.pcd", cloud_src1);
-        cloudwrite("cloud_tgt.pcd", cloud_tgt1);
-        cloudwrite("cloud_comb_1.pcd", combined);
+        //combined += cloud_src1;
+        //combined += cloud_tgt1;
+        //cloudwrite("cloud_src.pcd", cloud_src1);
+        //cloudwrite("cloud_tgt.pcd", cloud_tgt1);
+        //cloudwrite("cloud_comb_1.pcd", combined);
         #endif
 
         //make pointers of our clouds
@@ -526,7 +650,7 @@
         //run optimization
         Eigen::Matrix4f Ti;
         PointT_cloud_ptr reg_result = srcptr;
-        reg.setMaximumIterations(ALIGNMENT_ITERATIONS);//???
+        reg.setMaximumIterations(ALIGNMENT_ITERATIONS);
         reg.align(*reg_result);
         Ti = reg.getFinalTransformation();
         tf2::Transform retval = transformFromEigen(Ti); 
@@ -535,18 +659,29 @@
         combined += cloud_tgt1;
         combined += *reg_result;
         #if DEBUGCLOUD
-        cloudwrite("cloud_comb_2.pcd", combined);
+        //cloudwrite("cloud_comb_2.pcd", combined);
         #endif
 
-        ROS_INFO("ENDING ALIGNMENT");
+        ros::Time end = ros::Time::now();
+        #if DEBUGCLOUD
+        ros::Duration diffTime = end - begin;
+        double diffSecs = diffTime.toSec();
+        ROS_INFO("\tALIGNMENT FROM %zu TO %zu POINTS TOOK %.3f SECONDS", cloud_src1.size(), cloud_tgt1.size(), diffSecs);
+        #endif
         return retval;
 
-    }
+    }//pairAlign
 
+    void publishPointCloud(){
+        PointT_cloud_ptr msg = makeCloudPtr(pcloud); 
+        msg->header.frame_id = "some_point_tf_frame";
+        msg->height = 1;
+        msg->width = pcloud.size();
+        pcl_conversions::toPCL(ros::Time::now(), msg->header.stamp);
+        pcloud_pub->publish(msg);
 
+        return;
 
+    }//publishPointCloud
 
-    //########################################################
-    // Old/unused functions (for archiving and maybe revival)
-    //########################################################
 

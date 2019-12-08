@@ -13,6 +13,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/registration/icp_nl.h>
 #include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl_ros/point_cloud.h>
 #include <tf2_eigen/tf2_eigen.h>
 
@@ -30,6 +31,12 @@
 
     }//makeCloudPtr
 
+    /**
+    Publishes our static point cloud that we've been building
+    After which it is Not Our Problem! (sorta)
+    */
+    void publishPointCloud();
+
     void setCloudPoints(PointT_cloud &cloud, PointT_vec &vec){
         cloud.points = vec;
         cloud.height = 1;
@@ -37,6 +44,18 @@
 
     }//setCloudPoints
 
+    ///Just a dumb little function renaming
+    void cloudwrite(const char filename[], const PointT_cloud cloud){
+        pcl::io::savePCDFile(filename, cloud);
+    }//outputCloud
+
+    /**
+    Does some initial filtering to cull outliers, reduce overall point number
+    */
+    PointT_cloud filterIncoming(PointT_cloud &incoming);
+
+    PointT_cloud filterVoxel(const PointT_cloud cloud, double filterscale);
+    PointT_cloud filterOutlier(const PointT_cloud cloud);
 
     ///Convenience function to convert our transformation matrices
     Eigen::Matrix4f     transformFromTf2(const tf2::Transform xform);
@@ -44,12 +63,10 @@
     tf2::Transform      transformFromEigen(const Eigen::Matrix4f xform);
 
     /**
-    @param cloud_src        The first-guess transformed src cloud
     @param cloud_tgt        The first-guess transformed tgt cloud
-    @param srcXform         The given world xform for the src cloud (already applied)
+    @param cloud_src        The first-guess transformed src cloud
     @param dstXform         The given world xform for the tgt cloud (already applied)
-    @param output           Output variable: a representation of both stacked together (?)
-    @param final_transform  Output variable: the actual transformation to get dst onto src (?)
+    @param srcXform         The given world xform for the src cloud (already applied)
 
     @return                 Estimated transformation to put the src cloud onto the tgt cloud
     */
