@@ -12,6 +12,8 @@ The next step is to build the acclerated structure. One must parse the file and 
 
 # Performance Analysis
 
+![](../images/trt_graph.png)
+
 # Credits 
 
 RandInt8Calibrator.cpp and plugin.cpp are from nvidia and are credited as such. They were needed to perform proper calibration and building of tensorRT engines
