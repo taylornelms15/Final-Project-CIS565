@@ -6,18 +6,19 @@
 #define DEBUGCAMINFO (DEBUGOUT && 0)
 #define DEBUGIMAGE (DEBUGOUT && 0)
 #define DEBUGXFORM (DEBUGOUT && 0)
-#define DEBUGCLOUD (DEBUGOUT && 1)
+#define DEBUGCLOUD (DEBUGOUT && 0)
 
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM     48
+#define ENDFRAMENUM     32
 #define SKIPFRAMES      1
-#define SYNCFRAMES      8
+#define SYNCFRAMES      16
+#define OUTFRAMES       4
 
-#define ALIGNMENT_ITERATIONS 24
+#define ALIGNMENT_ITERATIONS 16
 #define ALIGNMENT_EPSILON 1e-6
-#define ALIGNMENT_DISTMAX 0.08
+#define ALIGNMENT_DISTMAX 0.12
 #define ALIGNMENT_FILTER_SCALE 0.04
 
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m...maybe
@@ -397,10 +398,6 @@
         prevcloud = incoming;
         prevxform = bagGuess;
 
-        #if DEBUGCLOUD
-        char filenameC[100]; std::sprintf(filenameC, "cloudsync_%d.pcd", numMatches);
-        cloudwrite(filenameC, pcloud);
-        #endif
 
  
     }//syncPointCloud
@@ -484,10 +481,16 @@
             accumulatePointCloud(thisFrameCloud, thisXform, prevcloud, prevxform);
 
         }//else
+
+        #if DEBUGCLOUD
+        if (numMatches % OUTFRAMES == 0){
+            char filenameC[100]; std::sprintf(filenameC, "cloudsync_%d.pcd", numMatches);
+            cloudwrite(filenameC, pcloud);
+        }
+        #endif
         
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
-            pcl::io::savePCDFile("testOutput.pcd", pcloud);
             ROS_INFO("Successfully ran %d matches", numMatches);
             publishPointCloud(); 
             //ros::shutdown();
