@@ -153,10 +153,11 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 	//
 	
 	// On first go around, create enough point cloud points to not worry about doing this later.
+	//ROS_INFO("Prepopulating");
 	static bool prepopulated = false;
 	if(prepopulated == false) {
 		// Create Point Clouds
-		for(int i = 0; i < 100; i++) {
+		for(int i = 0; i < class_descriptions.size(); i++) {
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr new_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 			cloud_map[i] = new_cloud;
 		}
@@ -165,16 +166,18 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 		for( const auto& str : class_descriptions) {
 			cloud_name_map[cloud_name_map.size()] = str;
 		}
-		cloud_name_map[255] = "No Label";
 		
 		// Done, only do once.
 		prepopulated = true;
 	}
+	//ROS_INFO("Done");
 	
 	// Convert to proper format. This destroys the contents of the msg object!
+	//ROS_INFO("From msg");
 	pcl::fromROSMsg(msg, *tmp_cloud);
 	
 	// Sort the incoming point cloud map into buckets based on labels
+	//ROS_INFO("Buckets!");
 	std::for_each(tmp_cloud->points.begin(), tmp_cloud->points.end(),
 		[=] (pcl::PointXYZRGBL& p) {
 			pcl::PointXYZRGB newp;
@@ -182,7 +185,14 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 			newp.y = p.y;
 			newp.z = p.z;
 			newp.rgb = p.rgb;
-			cloud_map[p.label]->push_back(newp);
+			
+			// Combine chairs, couches, and beds.
+			if(p.label == 62 || p.label == 63 || p.label == 65) {
+				cloud_map[62]->push_back(newp);
+			}
+			else {
+				cloud_map[p.label]->push_back(newp);
+			}
 		});
 	
 	//Increment our iteration counter
@@ -195,23 +205,33 @@ void PointCloud2Callback(const sensor_msgs::PointCloud2& msg)
 			auto cloud = kv.second;
 			std::string label = cloud_name_map[id];
 			
-			ROS_INFO("Working on Point cloud id %d (%s)", id, label);
-			
-			ROS_INFO("\tGenerating output!!");
-			pcl::PolygonMesh mesh;
-			pcl::PointXYZRGBNormal min;
-			pcl::PointXYZRGBNormal max;
-			
-			ROS_INFO("\tReducing...");
-			ReducePointCloud(cloud);
-			
-			ROS_INFO("\tGenerating Mesh...");
-			PointCloudToMesh(cloud, mesh, min, max);
-			
-			ROS_INFO("\tWriting to output file...");
-			WriteMeshToGLTF(label, mesh, min, max);
-			
-			ROS_INFO("\tDone with Point Cloud id %d (%s)!", id, label);
+			// Ignore clouds with too few points
+			if(cloud->size() > 1000) {
+				ROS_INFO("Working on Point cloud %d (%s)", id, label.c_str());
+				
+				ROS_INFO("\tGenerating output!!");
+				pcl::PolygonMesh mesh;
+				pcl::PointXYZRGBNormal min;
+				pcl::PointXYZRGBNormal max;
+				
+				ROS_INFO("\tReducing...");
+				ReducePointCloud(cloud);
+				
+				// If a cloud is empty after removing all outliers, dont generate a mesh.
+				if(cloud->size() == 0) {
+					ROS_INFO("\tMesh empty after reduction...");
+					continue;
+				}
+				
+				ROS_INFO("\tGenerating Mesh...");
+				PointCloudToMesh(cloud, mesh, min, max);
+				
+				ROS_INFO("\tWriting to output file...");
+				WriteMeshToGLTF(label, mesh, min, max);
+				
+				ROS_INFO("\tDone with Point Cloud");
+				cloud->clear();
+			}
 		}
 	}
 }
@@ -608,10 +628,10 @@ int main(int argc, char **argv)
 	* 
 	*/  
 	// Data from rosbag used for testing
-	ros::Subscriber sub3 = n.subscribe("/dronemom_pointcloud", 1000, PointCloud2Callback);
+	ros::Subscriber sub3 = n.subscribe("/dronemom_pointcloud", 200, PointCloud2Callback);
 	
 	// Subscribe to the map of detection IDS.
-	ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1000, VisionCallback);
+	ros::Subscriber sub = n.subscribe("/detectnet/vision_info", 1, VisionCallback);
 
 	ROS_INFO("point cloud, waiting for messages");
 	

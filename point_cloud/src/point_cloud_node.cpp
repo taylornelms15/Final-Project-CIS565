@@ -240,7 +240,7 @@
             gvec3 color = colorsCamspace.at(i) * factor;
             gvec3 pos   = pointsWorldspace.at(i);
             Point2f imgpt = validPoints[i];
-            int label = 0xff;
+            int label = 0x00;
 
             for(int j = 0; j < size; j++){
                 float center_x = classification.detections[j].bbox.center.x;
@@ -535,7 +535,7 @@
       * away the oldest ones.
       */
 
-        ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 1000, DetectionCallback);
+        ros::Subscriber dmomSub         = n.subscribe(dronemomSubPath, 200, DetectionCallback);
 
 
         //Advertise that we will totally publish something
