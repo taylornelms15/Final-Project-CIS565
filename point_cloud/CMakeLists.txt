@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(OpenCV REQUIRED PATHS /usr/local/share)
 find_package(CUDA REQUIRED)
-find_package(PCL 1.3 REQUIRED COMPONENTS common io)
 find_package(glm REQUIRED)
 
 ## Find catkin macros and libraries
@@ -25,6 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_eigen
 )
+
+find_package(PCL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -127,8 +128,8 @@ catkin_package(
 ## Build ##
 ###########
 
-set(ROS_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "-g")
+#set(ROS_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "-g")
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -179,7 +180,7 @@ source_group(Headers FILES ${headers})
 
 # Make a CUDA library
 set(LIB_TYPE STATIC)
-cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
+#cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
 
 
 ## Declare a C++ executable
@@ -200,7 +201,7 @@ add_dependencies(${PROJECT_NAME} CudaLibrary)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} CudaLibrary)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} )#CudaLibrary)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

@@ -1,6 +1,19 @@
-# Drone Mom
+# DroneMOM
+
+![](images/all_three.png)
+
 ## CIS565 Final Project for John Marcao, Eric Micallef, and Taylor Nelms
 
+* Eric Micallef
+  * [LinkedIn](https://www.linkedin.com/in/eric-micallef-99291714b/)
+
+* Taylor Nelms
+  * [LinkedIn](https://www.linkedin.com/in/taylor-k-7b2110191/), [Twitter](https://twitter.com/nelms_taylor)
+
+* John Marcao
+  * [LinkedIn](https://www.linkedin.com/in/jmarcao/), [Personal Website](https://jmarcao.github.io)
+
+## Table of Contents
 - [Problem Statement](#Problem-Statement)
 - [Repo Structure](#Repo-Structure) 
 - [Project Overview](#Project-Overview)
@@ -8,30 +21,60 @@
 - [Results](#Results)
 - [Build Instructions](#Build-Instructions)
 
-
 ## Problem Statement
 
-Collecting 3D object datasets involves a large amount of manual work and is time consuming. Can we build a system that can automate this?
+Collecting 3D object datasets involves a large amount of manual work and is time consuming. We have built a system that is capable of converting recorded video and depth camera data to generate 3D models on a Nvidia Jetson Nano.
 
-## Repo Structure
+## Project Overview
 
-This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
+ROS (Robot Operating System) is heavily used in research. We utilize ROS as a message passing backbone. Our ROS system consists of a central ROS Core and several ROS Nodes that may subscribe and publish messages. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. Our system contains three ROS Nodes we developed: an Object Detection node, a Point Cloud Node, and a Mesh Construction Node. These three nodes combine to form a pipeline that accepts a ROS bag containing video frames and depth sensor data and outputs a GLTF mesh of classified objects. 
 
-## Project Overview (add pictures)
-
-ROS is heavily used in research. ROS is a message passing backbone for use in Drone and other robotic applications. ROS systems consist of a central ROS Core and several ROS Nodes that may subscribe and publish messages. ROS also contains support for various robotics libraries. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. This also lets other developers interchange ROS components easily. For example, If someone wanted to create their own point cloud node in our system they can easily swap out the point cloud node for theirs as long as they publish the same infromation then nothing in theory should break.
-
-
+The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
 ## Design
 
 ![](images/dronemom_pipeline.png)
 
-The first step in our pipeline is to classify the important objects in a scene. This is done for two reasons. Reason 1 is that we need to be able to give a description of what objects are in a scene. The second reason is that we can give bounding boxes to the point cloud on where to focus in on. Point cloud computation is expensive so this is one way of optimizing. We only generate a point cloud in regions captured by the bouding boxes, reducing the calculations needed. After the point cloud is generated we pass it to a mesh construction node. The mesh construction node further filters and smooths the data to reduce noise from collection sensors. The cloud is then turned into a PCL PolygonMesh using a Greedy Triangulation Algorithm (Marton, et. al.). The data is finally converted into a GLTF file with accompanying binary data. The GLTF output may then be loaded on any GLTF viewer by the end user.
+The first step in our pipeline is to classify the important objects in a scene. We only generate a point cloud in regions captured by the bouding boxes, reducing the calculations needed.  After classification, the image data and bounding boxes are sent to a point cloud node for generation and labeling. After the point cloud is generated we pass it to a mesh construction node. The mesh construction node further filters and smooths the data to reduce noise from collection sensors. The cloud is then turned into a PCL PolygonMesh using a Greedy Triangulation Algorithm (Marton, et. al.). The data is finally converted into a GLTF file with accompanying binary data. The GLTF output may then be loaded on any GLTF viewer by the end user.
+
+### Object Detection
+
+### Point Cloud
+
+![](images/cloudprogress.gif)
+
+After a number of different approaches to scene reconstruction, we ended up using a combination of RGB and depth camera information to project points into a scene. This involved a few different challenges; despite having estimates for camera position over time, as well as camera calibration information, the positional measurements were not accurate to an actual ground truth (a fact rigorously verified by a technique we call "looking at the video and imagining how the camera would have to move").
+
+As such, we elected to make use of some of the [PCL](http://pointclouds.org/) library's tools for registering an aligning point clouds between subsequent frames, and using that to reconstruct camera motion and accumulate depth data into a growing point cloud buffer.
+
+![Aligning Points](images/cloud_alignment_compare.png)
+
+In this way, we were also able to construct a cumulative transformation that could be used to align all subsequent frames closer to the ground-truth world image.
+
+The technique had its flaws, to be sure; errors still propagate over time. As such, we register and align some frames to our cumulative buffer at regular intervals, in an attempt to cut down on object drift over time.
+
+In this way, we were able to incrementally build a scene from RGBD data over multiple frames.
+
+### Mesh Construction
+
+![](images/chair_mesh_behind.png)
+Chair mesh visualized using PCLViewer.
+
+The mesh construction step is done in four steps. First, data is collected from the Point Cloud node and filtered into buckets based on point labels. This allows the mesh construction node to generate unique models for each classified object. The node then performs a Point Reduction step. This will first perform Uniform Samplinng over the cloud. This will split the cloud into a 3D voxel grid and average all points in each voxel to a weighted centroid. It will also average color values. The data is then passed through a filter that removes all nodes with less than 15 neighbors within a given radius. This is done to remove outliers in the data set.
+
+The node then performs mesh construction in two steps. First, Moving Least Squares is applied to the point cloud to smooth the data. This step also generates normals for each points and appends it to the point cloud. Any malformed points are then removed from the cloud and lastly a Greedy Triangulation Algorithm is applied. This algorithm, implemented through the PCL library, looks at all points and connects them to their neighbors. Parameters such as search radius, maximum angles, and minimum angles govern what triangles are formed. The algorithm is "greedy" because once a triangle is formed, it is not removed from the mesh. This creates a bit of a noisy mesh, but makes it easir to generate meshes for noisy and incomplete data. Other methods were tried to poor results, namely Poisson and SDF methods.
+
+Lastly, the mesh is written to a GLTF file. The file contains all information needed to access the GLTF binary that is produced alongside it. The cycle then repeats for each point cloud submitted to the node. All meshes are stored so that the mesh may be inspected over time to see what changes between point cloud messages.
+
+![](images/chair_mesh_front_annotated.png)
+
+In the above image, the camera was located to the right. As one can see, the closer chair is cleaner and better defined, while the farther chairs is noisier.
 
 ## Results
 
-Further information and alysis can be found in the actual folder of the ROS node. Because we are utilizing ROS each subcomponent has its own readme. This is because users usign ROS can drag and drop nodes
+With our ROS nodes we were able to parse the [dataset](#References) provided by the Autonmous Systems Lab at Swiss Federal Instiute of Technology. Below are some examples of the final output.
+
+TODO: Gifs of GLTF files.
 
 ## Performance Analysis
 
@@ -39,6 +82,33 @@ Data was collected of running inference on the CPU and GPU FP16 is an optimzatio
 
 ![](images/trt_graph.png)
 
+### Difficulties in Performance Analysis
+
+Because of how interconnected our system was, the primary bottleneck (point alignment) became nearly impossible to profile because of how the OS scheduled the ROS threads. Further, even while tracking each point-alignment's time (which tended to hover around 5 seconds per incoming frame). As such, a rigorous analysis became nearly impossible.
+
+Further study on this subject would, in addition to refining some of these alignments, allow for a more carefully cultivated analysis, including a study on point counts and threshold parameters on timing restrictions. As it stands, though, we must resign ourselves to labeling some parts of our pipeline as "slow, but functional."
+
+## Shortcomings
+
+Overall, we ran into several issues steming from our use of the Jetson Nano. We often run into power draw issues, low memory warnings, and version dependency matches between what the Jetson supports and what other libraries support. Some of these issues could be helped by aggresive optimization and power considerations, as well as disabling uneeded features on the Jetson during runtime (such as the GUI).
+
+For object detection, ...
+
+Version issues with TensorRT. For example, the current Jetpack has TensorRT which supports up to ONNX version .3 the  current ONNX version is 1.5. 
+
+For point cloud generation, ...
+
+For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
+
+All being said for 100 dollars the jetson nano is still an impressive piece of hardware. It  just has its limitations as we have found.
+
+## Bloopers
+
+During integration testing, some test points were not being cleared properly and we got some... interesting pictures. You can see the side of several chairs layed out in a star formation.
+
+![](images/chair_star_bloop.gif)
+
+# Appendix
 
 ## Build Instructions
 
@@ -164,15 +234,13 @@ Now you can clone this repo into the src folder of your newly crated ROS workspa
 
 ### Build 
 
-navigate to your workspace so `~/CIS565/droneMoM_ws`
-
-and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
+Navigate to your workspace so `~/CIS565/droneMoM_ws` and type `catkin_make` This will build everything. Ensure there are no errors. Report to me if there are.
 
 That is it! Now you have ROS running and can make your ROS nodes.
 
 ### Test 
 
-open 4 terminals.
+Open 4 terminals.
 
 This is our roscore terminal it is like a master node ROS can only run with roscore
 
@@ -181,7 +249,7 @@ source devel/setup.bash
 roscore
 ```
 
-run this last
+Run this last
 
 ```bash
 source devel/setup.bash
@@ -231,18 +299,19 @@ To see what topics to subscribe to or what is in the bag type in.
 rosbag info <your bag>
 ```
 
+# Libraries
+
+* [ROS](https://www.ros.org/) for central architecture and message passing.
+* [PCL](http://pointclouds.org/) for Point Cloud and Mesh data types and algorithms.
+* [OpenCV](https://opencv.org/) for converting 2D images into 3D point clouds.
+* [TensorRT](https://developer.nvidia.com/tensorrt) for accelerated inference.
+* [cgltf](https://github.com/jkuhlmann/cgltf) for gltf JSON generation.
+* [CMake](https://cmake.org/) for a general build tool.
+
 # References
 
-* [MIT Blackbird Dataset](https://github.com/mit-fast/Blackbird-Dataset)
-  * Huge dump of drone data for processing
-* [The UZH-FPV Drone Racing Dataset](http://rpg.ifi.uzh.ch/uzh-fpv.html)
-  * Another drone data dump; this one focuses on high-speed drone operation in particular
-* [EuRoc MAV Dataset](https://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets)
-  * More Drone footage datasets
-* [Github Link with lists of further datasets](https://github.com/youngguncho/awesome-slam-datasets#unmanned-aerial-vehicle)
-* [Equation for Ray Closest Intersections](http://morroworks.palitri.com/Content/Docs/Rays%20closest%20point.pdf)
-* [Trifocal Tensor Code](https://github.com/cchampet/TrifocalTensor)
-* [Marton, et al. "On Fast Surface Reconstruction Methods for Large and Noisy Datasets"](chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://ias.informatik.tu-muenchen.de/_media/spezial/bib/marton09icra.pdf)
+* [Incremental Object Database: Building 3D Models from Multiple Partial Observations](https://projects.asl.ethz.ch/datasets/doku.php?id=iros2018incrementalobjectdatabase)
+* [On Fast Surface Reconstruction Methods for Large and Noisy Datasets](https://ias.informatik.tu-muenchen.de/_media/spezial/bib/marton09icra.pdf)
 
 
 # Credits 

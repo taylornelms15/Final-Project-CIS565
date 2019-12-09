@@ -426,7 +426,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 	// context->enqueue(batchSize, buffers, stream, nullptr);
 	// may need some ring buffer to do this properly
 	// and pipeline our loop
-	profiler_begin(INFERENCE_BEGIN,TRTStream);
+	//profiler_begin(INFERENCE_BEGIN,TRTStream);
 
 	if( !TRTContext->execute(1, inferenceBuffers) )
 	{
@@ -434,7 +434,7 @@ int ObjectDetection::Detect( float* rgba, uint32_t width, uint32_t height, Detec
 		return -1;
 	}
 
-	profiler_end(INFERENCE_END,TRTStream);
+	//profiler_end(INFERENCE_END,TRTStream);
 	
 	//profiler_begin(POSTPROCESS_BEGIN,TRTStream);
 	// post-processing / clustering

@@ -19,6 +19,12 @@
 
 #include <geometry_msgs/TransformStamped.h>
 #include <drone_mom_msgs/drone_mom.h>
+
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+
 /*
 *
 */ 
@@ -106,7 +112,7 @@ void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_
 			ObjectDetection::Detection* det = detections + n;
 
 			ROS_INFO("object %i class #%u (%s)  confidence=%f", n, det->ClassID, net->GetClassDesc(det->ClassID), det->Confidence);
-			ROS_INFO("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
+			//ROS_INFO("object %i bounding box (%f, %f)  (%f, %f)  w=%f  h=%f", n, det->Left, det->Top, det->Right, det->Bottom, det->Width(), det->Height()); 
 			
 			// create a detection sub-message
 			vision_msgs::Detection2D detMsg;
@@ -120,6 +126,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_
 			detMsg.bbox.center.x = cx;
 			detMsg.bbox.center.y = cy;
 
+            //ROS_INFO("object %i centers (%f, %f)", n, cx, cy);
+
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
 			// create classification hypothesis
@@ -127,10 +135,22 @@ void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_
 			
 			hyp.id = det->ClassID;
 			hyp.score = det->Confidence;
-			if(n==0){
+			//if(n==0){
 			// move this to something else no need to copy the same thing
-			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
-			}
+//			cvt->Convert(detMsg.source_img,sensor_msgs::image_encodings::BGR8);
+//			cv_bridge::CvImagePtr cv_ptr;
+//			try
+//			{
+//				cv_ptr = cv_bridge::toCvCopy(detMsg.source_img, sensor_msgs::image_encodings::RGB8);
+//			}
+//			catch (cv_bridge::Exception& e)
+//			{
+//				ROS_ERROR("cv_bridge exception: %s", e.what());
+//			return;
+//			}
+//				cv::imshow("Image window", cv_ptr->image);
+//				cv::waitKey(1); 
+			//}
 			detMsg.results.push_back(hyp);
 			msg.classification.detections.push_back(detMsg);
 		}
@@ -234,7 +254,7 @@ int main(int argc, char **argv)
 	/*
 	 * advertise publisher topics
 	 */
-	ros::Publisher pub = private_nh.advertise<drone_mom_msgs::drone_mom>("detections", 100);
+	ros::Publisher pub = private_nh.advertise<drone_mom_msgs::drone_mom>("detections", 200);
 	detection_pub = &pub; // we need to publish from the subscriber callback
 
 	// the vision info topic only publishes upon a new connection
@@ -248,28 +268,28 @@ int main(int argc, char **argv)
 	 // ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	
 	//
-	message_filters::Subscriber<sensor_msgs::Image> image_rgb_raw_sub(private_nh, "/camera/rgb/image_raw", 100);
+	message_filters::Subscriber<sensor_msgs::Image> image_rgb_raw_sub(private_nh, "/camera/rgb/image_raw", 200);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_rgb_sub(private_nh, "/camera/rgb/camera_info", 100);
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_rgb_sub(private_nh, "/camera/rgb/camera_info", 200);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_color_sub(private_nh, "/tango/T_I_C_color", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_color_sub(private_nh, "/tango/T_I_C_color", 200);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 200);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_depth_sub(private_nh, "/tango/T_I_C_depth", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_depth_sub(private_nh, "/tango/T_I_C_depth", 200);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_depth_sub(private_nh, "/camera/depth/camera_info", 100);	
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_depth_sub(private_nh, "/camera/depth/camera_info", 200);	
 
 	//
-	message_filters::Subscriber<sensor_msgs::Image> image_depth_raw_sub(private_nh, "/camera/depth/image_raw", 100);	
+	message_filters::Subscriber<sensor_msgs::Image> image_depth_raw_sub(private_nh, "/camera/depth/image_raw", 200);	
   	
   	//
-	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_rgb_raw_sub, cam_rgb_sub,image_depth_raw_sub,cam_depth_sub,tic_color_sub,tgi_sub,tic_depth_sub);
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(200), image_rgb_raw_sub, cam_rgb_sub,image_depth_raw_sub,cam_depth_sub,tic_color_sub,tgi_sub,tic_depth_sub);
   	
   	//
 	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5, _6, _7));
