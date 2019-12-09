@@ -82,6 +82,12 @@ Data was collected of running inference on the CPU and GPU FP16 is an optimzatio
 
 ![](images/trt_graph.png)
 
+### Difficulties in Performance Analysis
+
+Because of how interconnected our system was, the primary bottleneck (point alignment) became nearly impossible to profile because of how the OS scheduled the ROS threads. Further, even while tracking each point-alignment's time (which tended to hover around 5 seconds per incoming frame). As such, a rigorous analysis became nearly impossible.
+
+Further study on this subject would, in addition to refining some of these alignments, allow for a more carefully cultivated analysis, including a study on point counts and threshold parameters on timing restrictions. As it stands, though, we must resign ourselves to labeling some parts of our pipeline as "slow, but functional."
+
 ## Shortcomings
 
 Overall, we ran into several issues steming from our use of the Jetson Nano. We often run into power draw issues, low memory warnings, and version dependency matches between what the Jetson supports and what other libraries support. Some of these issues could be helped by aggresive optimization and power considerations, as well as disabling uneeded features on the Jetson during runtime (such as the GUI).
