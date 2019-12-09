@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(OpenCV REQUIRED PATHS /usr/local/share)
 find_package(CUDA REQUIRED)
-find_package(PCL 1.3 REQUIRED COMPONENTS common io)
 find_package(glm REQUIRED)
 
 ## Find catkin macros and libraries
@@ -25,6 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   tf2_eigen
 )
+
+find_package(PCL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

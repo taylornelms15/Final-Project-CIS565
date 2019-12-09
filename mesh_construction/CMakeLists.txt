@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   drone_mom_msgs
 )
 
+find_package(PCL REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(OpenCV REQUIRED)
@@ -122,7 +124,11 @@ include_directories(
 #  include
   ${catkin_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
+  ./src/ext/tinygltf/
+  ./src/ext/cgltf/
 )
+
+include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -155,6 +161,7 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
    ${catkin_LIBRARIES}
    ${OpenCV_LIBS} 
  )
+ target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES})
 
 #############
 ## Install ##

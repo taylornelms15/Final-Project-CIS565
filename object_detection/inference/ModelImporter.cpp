@@ -452,15 +452,6 @@ bool ModelImporter::ProfileModel(const std::string& deployFile,			    // name fo
 	//
 	std::map<std::string, nvinfer1::Dims3> inputDimensions;
 
-	// TODO figure this out
-	// for( int i=0, n=network->getNbInputs(); i < n; i++ )
-	// {
-	// 	nvinfer1::Dims3 dims = static_cast<nvinfer1::Dims3&&>(network->getInput(i)->getDimensions());
-	// 	inputDimensions.insert(std::make_pair(network->getInput(i)->getName(), dims));
-	// 	std::cout << LOG_TRT << "retrieved Input tensor \"" << network->getInput(i)->getName() << "\":  " << dims.d[0] << "x" << dims.d[1] << "x" << dims.d[2] << std::endl;
-	// }
-
-
 	// display progress of the engine
 	printf(LOG_TRT "device %s, configuring CUDA engine\n", deviceTypeToStr(device));
 	
