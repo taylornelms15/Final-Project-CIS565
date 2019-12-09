@@ -43,6 +43,8 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ### Point Cloud
 
+![](images/cloudprogress.gif)
+
 ### Mesh Construction
 
 ![](images/chair_mesh_behind.png)
