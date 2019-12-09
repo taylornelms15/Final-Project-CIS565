@@ -26,13 +26,28 @@ The top level README lays out high level functionality of the system. The separa
 
 The first step in our pipeline is to classify the important objects in a scene. We only generate a point cloud in regions captured by the bouding boxes, reducing the calculations needed.  After classification, the image data and bounding boxes are sent to a point cloud node for generation and labeling. After the point cloud is generated we pass it to a mesh construction node. The mesh construction node further filters and smooths the data to reduce noise from collection sensors. The cloud is then turned into a PCL PolygonMesh using a Greedy Triangulation Algorithm (Marton, et. al.). The data is finally converted into a GLTF file with accompanying binary data. The GLTF output may then be loaded on any GLTF viewer by the end user.
 
+### Object Detection
+
+### Point Cloud
+
+### Mesh Construction
+
+![](images/chair_mesh_behind.png)
+Chair mesh visualized using PCLViewer.
+
+The mesh construction step is done in four steps. First, data is collected from the Point Cloud node and filtered into buckets based on point labels. This allows the mesh construction node to generate unique models for each classified object. The node then performs a Point Reduction step. This will first perform Uniform Samplinng over the cloud. This will split the cloud into a 3D voxel grid and average all points in each voxel to a weighted centroid. It will also average color values. The data is then passed through a filter that removes all nodes with less than 15 neighbors within a given radius. This is done to remove outliers in the data set.
+
+The node then performs mesh construction in two steps. First, Moving Least Squares is applied to the point cloud to smooth the data. This step also generates normals for each points and appends it to the point cloud. Any malformed points are then removed from the cloud and lastly a Greedy Triangulation Algorithm is applied. This algorithm, implemented through the PCL library, looks at all points and connects them to their neighbors. Parameters such as search radius, maximum angles, and minimum angles govern what triangles are formed. The algorithm is "greedy" because once a triangle is formed, it is not removed from the mesh. This creates a bit of a noisy mesh, but makes it easir to generate meshes for noisy and incomplete data. Other methods were tried to poor results, namely Poisson and SDF methods.
+
+Lastly, the mesh is written to a GLTF file. The file contains all information needed to access the GLTF binary that is produced alongside it. The cycle then repeats for each point cloud submitted to the node. All meshes are stored so that the mesh may be inspected over time to see what changes between point cloud messages.
+
+![](images/chair_mesh_front_annotated.png)
+
+In the above image, the camera was located to the right. As one can see, the closer chair is cleaner and better defined, while the farther chairs is noisier.
+
 ## Results
 
-Further information and analysis can be found in the actual folder of the ROS node. Because we are utilizing ROS each subcomponent has its own README.
-
-## Repo Structure
-
-This repository is laid out in the following manner. The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
+....
 
 ## Performance Analysis
 
@@ -40,7 +55,15 @@ Data was collected of running inference on the CPU and GPU FP16 is an optimzatio
 
 ![](images/trt_graph.png)
 
-## Future Work
+## Shortcomings
+
+Overall, we ran into several issues steming from our use of the Jetson Nano. We often run into power draw issues, low memory warnings, and version dependency matches between what the Jetson supports and what other libraries support. Some of these issues could be helped by aggresive optimization and power considerations, as well as disabling uneeded features on the Jetson during runtime (such as the GUI).
+
+For object detection, ...
+
+For point cloud generation, ...
+
+For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
 
 # Appendix
 
