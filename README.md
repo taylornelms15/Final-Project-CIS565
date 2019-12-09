@@ -1,4 +1,4 @@
-# DroneMOM
+# DroneMOM - Drone Model Output Machine
 
 ![](images/all_three.png)
 
@@ -39,6 +39,12 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ### Object Detection
 
+![](images/detect.gif)
+
+In thie project we utilize the SSD mobile net architecture to perform accelerated inferencing on the GPU. TensorRT is utilized to do the accleration on the Jetson Nano. The SSD mobile net architecture is commonly used in mobile devices where resources  are limited. Which  describes the Jetson nano. The object classification is trained on the COCO data set. Which is a common data set used for benchmarking neural networks. 
+
+TensorRT was utilized to performance the accleration. To use TensorRT one must build an engine first. Once the engine is built we can then run an acclerated inference.
+
 ### Point Cloud
 
 ![](images/cloudprogress.gif)
@@ -72,9 +78,11 @@ In the above image, the camera was located to the right. As one can see, the clo
 
 ## Results
 
-With our ROS nodes we were able to parse the [dataset](#References) provided by the Autonmous Systems Lab at Swiss Federal Instiute of Technology. Below are some examples of the final output.
+With our ROS nodes we were able to parse the [dataset](#References) provided by the Autonmous Systems Lab at Swiss Federal Instiute of Technology. Below are some examples of the final output after integration and testing over the full "Three Chairs" dataset.
 
-TODO: Gifs of GLTF files.
+![](images/chairs_final.gif)
+
+... Not great. Unfortunetly we ran into two problems: the video did not provide enough calibrated data to measure camera movement accurately. To offset this the Point Cloud generation switched to a registration and alignment algorithm. The side effect of this is that orientation on the chairs were lost. Over several frames, the chair would snap to a different location and be averaged at that point. The different parts of the chair can be seen in the above GIF exploded out. The become much clearer when using only a few frames, but over time the model becomes distorted. The different faces of the chair are also not rendered properly. Due to windinng order in GLTF, faces are not rendered on their backside.
 
 ## Performance Analysis
 
@@ -94,7 +102,7 @@ For point cloud generation, ...
 
 For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
 
-All being said for 100 dollars the jetson nano is still an impressive piece of hardware. It  just has its limitations as we have found.
+All being said for 100 dollars the Jetson Nano is still an impressive piece of hardware. It just has its limitations as we have found.
 
 ## Bloopers
 
