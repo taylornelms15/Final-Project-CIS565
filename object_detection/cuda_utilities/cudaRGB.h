@@ -6,8 +6,6 @@
 #include <stdint.h>
 
 /**
- * Convert 8-bit fixed-point BGR image to 32-bit floating-point RGBA image
- * @ingroup colorspace
  */
 cudaError_t cudaBGR8ToRGBA32( uchar3* input, float4* output, size_t width, size_t height );
 	

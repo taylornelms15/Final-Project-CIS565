@@ -90,19 +90,29 @@ Data was collected of running inference on the CPU and GPU FP16 is an optimzatio
 
 ![](images/trt_graph.png)
 
+### Difficulties in Performance Analysis
+
+Because of how interconnected our system was, the primary bottleneck (point alignment) became nearly impossible to profile because of how the OS scheduled the ROS threads. Further, even while tracking each point-alignment's time (which tended to hover around 5 seconds per incoming frame). As such, a rigorous analysis became nearly impossible.
+
+Further study on this subject would, in addition to refining some of these alignments, allow for a more carefully cultivated analysis, including a study on point counts and threshold parameters on timing restrictions. As it stands, though, we must resign ourselves to labeling some parts of our pipeline as "slow, but functional."
+
 ## Shortcomings
 
 Overall, we ran into several issues steming from our use of the Jetson Nano. We often run into power draw issues, low memory warnings, and version dependency matches between what the Jetson supports and what other libraries support. Some of these issues could be helped by aggresive optimization and power considerations, as well as disabling uneeded features on the Jetson during runtime (such as the GUI).
 
-For object detection, ...
+### Object detection
 
 Version issues with TensorRT. For example, the current Jetpack has TensorRT which supports up to ONNX version .3 the  current ONNX version is 1.5. 
 
-For point cloud generation, ...
+### Point Cloud Generation
 
-For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
+The alignment across a number of frames still accumulates error. An approach that would align multiple subsequent frames together would have been ideal; in fact, with more time and study, this is very feasible. Additionally, the performance cost of this point alignment is significant, and is the primary performance concern overall.
 
-All being said for 100 dollars the Jetson Nano is still an impressive piece of hardware. It just has its limitations as we have found.
+### Mesh Construction
+
+The meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
+
+All being said for 100 dollars the Jetson Nano is still an impressive piece of hardware. But, as we found: it has its limitations.
 
 ## Bloopers
 
