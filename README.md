@@ -25,8 +25,6 @@
 
 Collecting 3D object datasets involves a large amount of manual work and is time consuming. We have built a system that is capable of converting recorded video and depth camera data to generate 3D models on a Nvidia Jetson Nano.
 
-(Stitched Picture Here!)
-
 ## Project Overview
 
 ROS (Robot Operating System) is heavily used in research. We utilize ROS as a message passing backbone. Our ROS system consists of a central ROS Core and several ROS Nodes that may subscribe and publish messages. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. Our system contains three ROS Nodes we developed: an Object Detection node, a Point Cloud Node, and a Mesh Construction Node. These three nodes combine to form a pipeline that accepts a ROS bag containing video frames and depth sensor data and outputs a GLTF mesh of classified objects. 
@@ -45,6 +43,18 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ![](images/cloudprogress.gif)
 
+After a number of different approaches to scene reconstruction, we ended up using a combination of RGB and depth camera information to project points into a scene. This involved a few different challenges; despite having estimates for camera position over time, as well as camera calibration information, the positional measurements were not accurate to an actual ground truth (a fact rigorously verified by a technique we call "looking at the video and imagining how the camera would have to move").
+
+As such, we elected to make use of some of the [PCL](http://pointclouds.org/) library's tools for registering an aligning point clouds between subsequent frames, and using that to reconstruct camera motion and accumulate depth data into a growing point cloud buffer.
+
+![Aligning Points](images/cloud_alignment_compare.png)
+
+In this way, we were also able to construct a cumulative transformation that could be used to align all subsequent frames closer to the ground-truth world image.
+
+The technique had its flaws, to be sure; errors still propagate over time. As such, we register and align some frames to our cumulative buffer at regular intervals, in an attempt to cut down on object drift over time.
+
+In this way, we were able to incrementally build a scene from RGBD data over multiple frames.
+
 ### Mesh Construction
 
 ![](images/chair_mesh_behind.png)
@@ -62,7 +72,9 @@ In the above image, the camera was located to the right. As one can see, the clo
 
 ## Results
 
-....
+With our ROS nodes we were able to parse the [dataset](#References) provided by the Autonmous Systems Lab at Swiss Federal Instiute of Technology. Below are some examples of the final output.
+
+TODO: Gifs of GLTF files.
 
 ## Performance Analysis
 
@@ -76,9 +88,19 @@ Overall, we ran into several issues steming from our use of the Jetson Nano. We 
 
 For object detection, ...
 
+Version issues with TensorRT. For example, the current Jetpack has TensorRT which supports up to ONNX version .3 the  current ONNX version is 1.5. 
+
 For point cloud generation, ...
 
 For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
+
+All being said for 100 dollars the jetson nano is still an impressive piece of hardware. It  just has its limitations as we have found.
+
+## Bloopers
+
+During integration testing, some test points were not being cleared properly and we got some... interesting pictures. You can see the side of several chairs layed out in a star formation.
+
+![](images/chair_star_bloop.gif)
 
 # Appendix
 
@@ -273,11 +295,12 @@ rosbag info <your bag>
 
 # Libraries
 
-* [ROS](https://www.ros.org/)
-* [PCL](http://pointclouds.org/)
-* [OpenCV](https://opencv.org/)
-* [TensorRT](https://developer.nvidia.com/tensorrt)
-* [CMake](https://cmake.org/)
+* [ROS](https://www.ros.org/) for central architecture and message passing.
+* [PCL](http://pointclouds.org/) for Point Cloud and Mesh data types and algorithms.
+* [OpenCV](https://opencv.org/) for converting 2D images into 3D point clouds.
+* [TensorRT](https://developer.nvidia.com/tensorrt) for accelerated inference.
+* [cgltf](https://github.com/jkuhlmann/cgltf) for gltf JSON generation.
+* [CMake](https://cmake.org/) for a general build tool.
 
 # References
 
