@@ -15,7 +15,6 @@
 
 ## Table of Contents
 - [Problem Statement](#Problem-Statement)
-- [Repo Structure](#Repo-Structure) 
 - [Project Overview](#Project-Overview)
 - [Design](#Design)
 - [Results](#Results)
@@ -28,8 +27,6 @@ Collecting 3D object datasets involves a large amount of manual work and is time
 ## Project Overview
 
 ROS (Robot Operating System) is heavily used in research. We utilize ROS as a message passing backbone. Our ROS system consists of a central ROS Core and several ROS Nodes that may subscribe and publish messages. We utilized the ROS architecture for our design. This allows us to use ROS bags to replay back our data and refine our algorithms. ROS bags are recorded messages from sensors that can be fed into a ROS system. Our system contains three ROS Nodes we developed: an Object Detection node, a Point Cloud Node, and a Mesh Construction Node. These three nodes combine to form a pipeline that accepts a ROS bag containing video frames and depth sensor data and outputs a GLTF mesh of classified objects. 
-
-The top level README lays out high level functionality of the system. The separate ROS nodes each have a README that contains more information and performance analysis of the individual components.
 
 ## Design
 
