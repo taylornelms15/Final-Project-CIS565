@@ -6,19 +6,20 @@
 #define DEBUGCAMINFO (DEBUGOUT && 0)
 #define DEBUGIMAGE (DEBUGOUT && 0)
 #define DEBUGXFORM (DEBUGOUT && 0)
-#define DEBUGCLOUD (DEBUGOUT && 1)
+#define DEBUGCLOUD (DEBUGOUT && 0)
 
 #define WRITING_PICS 1
 #define USING_DRONEMOM_MSG 1
 
-#define ENDFRAMENUM     96
+#define ENDFRAMENUM     32
 #define SKIPFRAMES      1
-#define SYNCFRAMES      8
+#define SYNCFRAMES      16
+#define OUTFRAMES       4
 
-#define ALIGNMENT_ITERATIONS 20
+#define ALIGNMENT_ITERATIONS 16
 #define ALIGNMENT_EPSILON 1e-6
-#define ALIGNMENT_DISTMAX 0.08
-#define ALIGNMENT_FILTER_SCALE 0.038
+#define ALIGNMENT_DISTMAX 0.12
+#define ALIGNMENT_FILTER_SCALE 0.04
 
 //This is what converts depth-space into world space. In reality, USHRT_MAX becomes 4m...maybe
 #define SCALING (100.0/65535.0)//this should definitely stay here now, other scaling factors are based off it
@@ -51,6 +52,9 @@
 
     static int                         numMatches  = 0;
 
+    static bool Overlaps(float x, float y, float Right, float Left, float Bottom, float Top){
+        return ( (x < Right) && (x > Left) && (y < Top) && (y > Bottom));
+    }//Overlaps
 
     /**
     Gets the relative transform between two transforms in terms of a tf2::Transform
@@ -152,8 +156,8 @@
     Point2f_vec getValidPoints(cv::Mat imgCU, cv::Mat depthMat){
         //get our list of valid points
         Point2f_vec validPoints = Point2f_vec();
-        for(int i = 4; i < imgCU.rows - 4; i++){//removing edges
-            for(int j = 4; j < imgCU.cols - 4; j++){//removing edges
+        for(int i = 50; i < imgCU.rows - 50; i++){//removing edges
+            for(int j = 50; j < imgCU.cols - 50; j++){//removing edges
                 uint16_t depthVal = depthMat.at<uint16_t>(i, j);
                 if (depthVal < 400) continue;
                 validPoints.push_back(Point2f(j, i));
@@ -214,7 +218,6 @@
     }//cameraToWorldSpace
 
     /**
-    //TODO: put the classification info in here
     @param validPoints      Vector of cv::Point2f points that describe the locations on the image we're projecting into space
     @param imgC             The cv::Mat representing the input color image
     @param colorsCamspace   The colors from the image for each point (same size as validPoints; already sampled)
@@ -229,13 +232,37 @@
                                   vision_msgs::Detection2DArray classification,
                                   gvec3 factor = gvec3(1.0f, 1.0f, 1.0f)){
         PointT_vec retval = PointT_vec();
+        int size = classification.detections.size();
+
+
+
         for (int i = 0; i < colorsCamspace.size(); i++){
             gvec3 color = colorsCamspace.at(i) * factor;
             gvec3 pos   = pointsWorldspace.at(i);
-            //TODO: put the right classification index into the back end of this constructor
-            PointT nextPoint = PointT(color.r, color.g, color.b, 0);
+            Point2f imgpt = validPoints[i];
+            int label = 0xff;
+
+            for(int j = 0; j < size; j++){
+                float center_x = classification.detections[j].bbox.center.x;
+                float center_y = classification.detections[j].bbox.center.y;
+                float x = classification.detections[j].bbox.size_x;
+                float y = classification.detections[j].bbox.size_y;
+                float Right = center_x + x * 0.5;
+                float Left = center_x - x * 0.5;
+                float Bottom = center_y - y * 0.5;
+                float Top = center_y + y * 0.5;
+
+                bool rval = Overlaps(imgpt.x, imgpt.y, Right, Left, Bottom, Top);
+                if(rval){
+                    label = classification.detections[j].results[0].id;
+                }//if
+
+
+            }//for
+
+
+            PointT nextPoint = PointT(color.r, color.g, color.b, label);
             nextPoint.x = pos.x; nextPoint.y = pos.y; nextPoint.z = pos.z;
-            //pcloud.push_back(nextPoint);//this would put the new points into the global point cloud
             retval.push_back(nextPoint);
         }//for
 
@@ -336,8 +363,6 @@
         //update our global point cloud with the new frame's points THIS UPDATES THE STATIC CLOUD
         pcloud += transformedCurrent;
 
-        //EVENTUAL TODO: filter every however many frames, perhaps reset the cumulative error at that point too (to avoid drift)
-
 
         //Make our current frame the "previous" for the next iteration
         prevcloud = incoming;
@@ -373,10 +398,6 @@
         prevcloud = incoming;
         prevxform = bagGuess;
 
-        #if DEBUGCLOUD
-        char filenameC[100]; std::sprintf(filenameC, "cloudsync_%d.pcd", numMatches);
-        cloudwrite(filenameC, pcloud);
-        #endif
 
  
     }//syncPointCloud
@@ -460,10 +481,16 @@
             accumulatePointCloud(thisFrameCloud, thisXform, prevcloud, prevxform);
 
         }//else
+
+        #if DEBUGCLOUD
+        if (numMatches % OUTFRAMES == 0){
+            char filenameC[100]; std::sprintf(filenameC, "cloudsync_%d.pcd", numMatches);
+            cloudwrite(filenameC, pcloud);
+        }
+        #endif
         
         //breakpoint target so we don't fill our point cloud too much
         if (numMatches % ENDFRAMENUM == 0){
-            pcl::io::savePCDFile("testOutput.pcd", pcloud);
             ROS_INFO("Successfully ran %d matches", numMatches);
             publishPointCloud(); 
             //ros::shutdown();
@@ -513,20 +540,8 @@
 
         //Advertise that we will totally publish something
         ros::Publisher pub = n.advertise<PointT_cloud>("dronemom_pointcloud", 100);
-        *pcloud_pub = pub;
+        pcloud_pub = &pub;
 
-        //small function to verify our link to CUDA
-        //This will almost certainly remain unused and useless
-        float array1[32];
-        float array2[32];
-        for (int i = 0; i < 32; i++){
-            //array1[i] = 1.0f;
-            //array2[i] = 1.0f;
-            array1[i] = (float) ((i * 23) % 4);
-            array2[i] = (float) ((i * 25) % 3);
-        }//for
-        float dotProduct = testCudaFunctionality(array1, array2);
-        ROS_INFO("Dot product: %f", dotProduct);
 
 
         ROS_INFO("point cloud, waiting for messages");
@@ -566,10 +581,11 @@
         PointT_cloud_ptr cloud_ptr = makeCloudPtr(cloud);
         pcl::StatisticalOutlierRemoval<PointT> sor;
         sor.setInputCloud(cloud_ptr);
+        sor.setMeanK(3);
         PointT_cloud retval = PointT_cloud();
         sor.filter(retval);
         #if DEBUGCLOUD
-        //ROS_INFO("Meank %d\tBeginning points: %zu Ending points:%zu", sor.getMeanK(), cloud.size(), retval.size());
+        //ROS_INFO("MeankThresh %.3f\tBeginning points: %zu Ending points:%zu", sor.getStddevMulThresh(), cloud.size(), retval.size());
         #endif
         return retval;
 

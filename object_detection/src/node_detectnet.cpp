@@ -126,6 +126,8 @@ void img_callback( const sensor_msgs::ImageConstPtr& rgb_raw_image,const sensor_
 			detMsg.bbox.center.x = cx;
 			detMsg.bbox.center.y = cy;
 
+            ROS_INFO("object %i centers (%f, %f)", n, cx, cy);
+
 			detMsg.bbox.center.theta = 0.0f;		// TODO optionally output object image
 
 			// create classification hypothesis
@@ -252,7 +254,7 @@ int main(int argc, char **argv)
 	/*
 	 * advertise publisher topics
 	 */
-	ros::Publisher pub = private_nh.advertise<drone_mom_msgs::drone_mom>("detections", 100);
+	ros::Publisher pub = private_nh.advertise<drone_mom_msgs::drone_mom>("detections", 1000);
 	detection_pub = &pub; // we need to publish from the subscriber callback
 
 	// the vision info topic only publishes upon a new connection
@@ -266,28 +268,28 @@ int main(int argc, char **argv)
 	 // ros::Subscriber img_sub = private_nh.subscribe("/image_publisher/image_raw", 5, img_callback);
 	
 	//
-	message_filters::Subscriber<sensor_msgs::Image> image_rgb_raw_sub(private_nh, "/camera/rgb/image_raw", 100);
+	message_filters::Subscriber<sensor_msgs::Image> image_rgb_raw_sub(private_nh, "/camera/rgb/image_raw", 1000);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_rgb_sub(private_nh, "/camera/rgb/camera_info", 100);
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_rgb_sub(private_nh, "/camera/rgb/camera_info", 1000);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_color_sub(private_nh, "/tango/T_I_C_color", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_color_sub(private_nh, "/tango/T_I_C_color", 1000);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tgi_sub(private_nh, "/tango_viwls/T_G_I", 1000);
 
 	//
-	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_depth_sub(private_nh, "/tango/T_I_C_depth", 100);
+	message_filters::Subscriber<geometry_msgs::TransformStamped> tic_depth_sub(private_nh, "/tango/T_I_C_depth", 1000);
 
 	//
-	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_depth_sub(private_nh, "/camera/depth/camera_info", 100);	
+	message_filters::Subscriber<sensor_msgs::CameraInfo> cam_depth_sub(private_nh, "/camera/depth/camera_info", 1000);	
 
 	//
-	message_filters::Subscriber<sensor_msgs::Image> image_depth_raw_sub(private_nh, "/camera/depth/image_raw", 100);	
+	message_filters::Subscriber<sensor_msgs::Image> image_depth_raw_sub(private_nh, "/camera/depth/image_raw", 1000);	
   	
   	//
-	Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), image_rgb_raw_sub, cam_rgb_sub,image_depth_raw_sub,cam_depth_sub,tic_color_sub,tgi_sub,tic_depth_sub);
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(1000), image_rgb_raw_sub, cam_rgb_sub,image_depth_raw_sub,cam_depth_sub,tic_color_sub,tgi_sub,tic_depth_sub);
   	
   	//
 	sync.registerCallback(boost::bind(&img_callback, _1, _2, _3, _4, _5, _6, _7));

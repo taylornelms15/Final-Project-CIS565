@@ -9,7 +9,7 @@
 /**
  * Default value of the minimum detection threshold
  */
-#define DETECTNET_DEFAULT_THRESHOLD 0.8f
+#define DETECTNET_DEFAULT_THRESHOLD 0.5f
 
 /**
  * Default alpha blending value used during overlay
