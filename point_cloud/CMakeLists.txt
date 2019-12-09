@@ -127,8 +127,8 @@ catkin_package(
 ## Build ##
 ###########
 
-set(ROS_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "-g")
+#set(ROS_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "-g")
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -179,7 +179,7 @@ source_group(Headers FILES ${headers})
 
 # Make a CUDA library
 set(LIB_TYPE STATIC)
-cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
+#cuda_add_library(CudaLibrary ${LIB_TYPE} ${cudasources})
 
 
 ## Declare a C++ executable
@@ -200,7 +200,7 @@ add_dependencies(${PROJECT_NAME} CudaLibrary)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} CudaLibrary)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} ${catkin_LIBRARIES} ${PCL_LIBRARIES} )#CudaLibrary)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
