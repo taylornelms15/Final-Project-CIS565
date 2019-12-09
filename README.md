@@ -38,9 +38,9 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ![](images/detect.gif)
 
-In thie project we utilize the SSD mobile net architecture to perform accelerated inferencing on the GPU. TensorRT is utilized to do the accleration on the Jetson Nano. The SSD mobile net architecture is commonly used in mobile devices where resources  are limited. Which  describes the Jetson nano. The object classification is trained on the COCO data set. Which is a common data set used for benchmarking neural networks. 
+In the project we utilize the SSD mobile net architecture to perform accelerated inferencing on the GPU. TensorRT is utilized to do the accleration on the Jetson Nano. The SSD mobile net architecture is commonly used in mobile devices where resources  are limited, which  describes the Jetson nano. The object classification is trained on the COCO data set. Which is a common data set used for benchmarking neural networks. 
 
-TensorRT was utilized to performance the accleration. To use TensorRT one must build an engine first. Once the engine is built we can then run an acclerated inference.
+To use TensorRT one must build an engine first. We first create a model. Once the model is created, we freeze the graph values and convert to a TensorRT format. Using the Nvidia APIs, we build the and optimize the graph for our model. Once the engine is built we can then run an acclerated inference on our incoming data. This allowed us to achieve an average infereance time of 50 milliseconds per frame.
 
 ### Point Cloud
 
