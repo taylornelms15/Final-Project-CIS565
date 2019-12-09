@@ -615,7 +615,7 @@ int main(int argc, char **argv)
 
 	ROS_INFO("point cloud, waiting for messages");
 	
-#if 1	// PCD Load for Testing
+#if 0	// PCD Load for Testing
 	// Load input file into a PointCloud<T> with an appropriate type
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::PCLPointCloud2 cloud_blob;
