@@ -1,6 +1,19 @@
-# Drone Mom
+# DroneMOM
+
+![](images/all_three.png)
+
 ## CIS565 Final Project for John Marcao, Eric Micallef, and Taylor Nelms
 
+* Eric Micallef
+  * [LinkedIn](https://www.linkedin.com/in/eric-micallef-99291714b/)
+
+* Taylor Nelms
+  * [LinkedIn](https://www.linkedin.com/in/taylor-k-7b2110191/), [Twitter](https://twitter.com/nelms_taylor)
+
+* John Marcao
+  * [LinkedIn](https://www.linkedin.com/in/jmarcao/), [Personal Website](https://jmarcao.github.io)
+
+## Table of Contents
 - [Problem Statement](#Problem-Statement)
 - [Repo Structure](#Repo-Structure) 
 - [Project Overview](#Project-Overview)
