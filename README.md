@@ -74,9 +74,13 @@ Overall, we ran into several issues steming from our use of the Jetson Nano. We 
 
 For object detection, ...
 
+Version issues with TensorRT. For example, the current Jetpack has TensorRT which supports up to ONNX version .3 the  current ONNX version is 1.5. 
+
 For point cloud generation, ...
 
 For mesh construction, the meshes are still very noisy. A lot of clean data is required for better sampling methods. To improve, either a better algorithm for surface reconstruciton from point clouds needs to be implemented or the point clouds need to be more complete. This is especially difficult since the data format we are using, ROS bags, are not easy to generate without the required hardware.
+
+All being said for 100 dollars the jetson nano is still an impressive piece of hardware. It  just has its limitations as we have found.
 
 # Appendix
 
