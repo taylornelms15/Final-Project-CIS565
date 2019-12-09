@@ -43,6 +43,18 @@ The first step in our pipeline is to classify the important objects in a scene. 
 
 ![](images/cloudprogress.gif)
 
+After a number of different approaches to scene reconstruction, we ended up using a combination of RGB and depth camera information to project points into a scene. This involved a few different challenges; despite having estimates for camera position over time, as well as camera calibration information, the positional measurements were not accurate to an actual ground truth (a fact rigorously verified by a technique we call "looking at the video and imagining how the camera would have to move").
+
+As such, we elected to make use of some of the [PCL](http://pointclouds.org/) library's tools for registering an aligning point clouds between subsequent frames, and using that to reconstruct camera motion and accumulate depth data into a growing point cloud buffer.
+
+![Aligning Points](images/cloud_alignment_compare.png)
+
+In this way, we were also able to construct a cumulative transformation that could be used to align all subsequent frames closer to the ground-truth world image.
+
+The technique had its flaws, to be sure; errors still propagate over time. As such, we register and align some frames to our cumulative buffer at regular intervals, in an attempt to cut down on object drift over time.
+
+In this way, we were able to incrementally build a scene from RGBD data over multiple frames.
+
 ### Mesh Construction
 
 ![](images/chair_mesh_behind.png)
